@@ -24,7 +24,7 @@ def maybe_download_cosmos(target_dir, sample="25.2"):
     target = os.path.join(target_dir, file_name)
     unpack_dir = target[:-len('.tar.gz')]
     args = {'quiet': True, 'force': False, 'verbosity': 2}
-    args = namedtuple('Args', args.keys)(*args.values())
+    args = namedtuple('Args', args.keys())(*args.values())
 
     # Download the tarball
     new_download, target, meta = galsim.download_cosmos.download(url, target,

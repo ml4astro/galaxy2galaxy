@@ -4,15 +4,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import os
-import zipfile
-
-from galaxy2galaxy.data_generators import galsim_utils
+from . import galsim_utils
 
 from tensor2tensor.data_generators import generator_utils
 from tensor2tensor.data_generators import image_utils
 from tensor2tensor.data_generators import problem
-from tensor2tensor.layers import modalities
 from tensor2tensor.utils import registry
 from tensor2tensor.utils import metrics
 
@@ -20,7 +16,7 @@ import tensorflow as tf
 import galsim
 
 
-class GalSimProblem(image_utils.Problem):
+class GalsimProblem(problem.Problem):
   """Base class for image problems generated with GalSim.
 
   Subclasses need only implement the `galsim_generator` function used to draw
@@ -158,7 +154,7 @@ class GalSimProblem(image_utils.Problem):
 
 
 @registry.register_problem
-class GalSimCosmos(GalSimProblem):
+class GalsimCosmos(GalsimProblem):
   """
   Subclass of GalSim problem implementing drawing galaxies from the COSMOS
   dataset.
