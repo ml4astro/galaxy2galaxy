@@ -12,6 +12,9 @@ def _float_feature(value):
     """Returns a float_list from a float / double."""
     return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
+def _bytes_feature(value):
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
 def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale):
     """
     Draws the galaxy, psf and noise power spectrum on a postage stamp and
@@ -22,10 +25,10 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale):
 
     # Draw the Fourier domain image of the galaxy
     imC = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
-                        np.pi / (pixel_scale * stamp_size))
+                         np.pi / (pixel_scale * stamp_size))
 
     imCp = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
-                         np.pi / (pixel_scale * stamp_size))
+                          np.pi / (pixel_scale * stamp_size))
 
     gal.drawKImage(image=imC)
     psf.drawKImage(image=imCp)
@@ -63,9 +66,9 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale):
     # Apply mask to power spectrum so that it is very large outside maxk
     ps = np.where(mask, np.log(ps**2), 10).astype('float32')
 
-    return {"image/encoded": [_float_feature(im)],
+    return {"image/encoded": [im.tostring()],
             "image/format": ["raw"],
-            "psf/encoded": [_float_feature(im_psf)],
+            "psf/encoded": [im_psf.tostring()],
             "psf/format": ["raw"],
-            "ps/encoded": [_float_feature(ps)],
+            "ps/encoded": [ps.tostring()],
             "ps/format": ["raw"]}

@@ -160,17 +160,17 @@ class GalsimCosmos(GalsimProblem):
   dataset.
   """
 
-  def galsim_generator(self, tmp_dir, task_id=-1):
+  def generator(self, tmp_dir, task_id=-1):
     """
     Generates and yields postage stamps obtained with GalSim.
     """
     p = self.get_hparams()
-    catalog = galsim.COSMOSCatalog(dir=tmp_dir)
+    catalog = galsim.COSMOSCatalog(dir=tmp_dir+'/COSMOS_25.2_training_sample')
     index = [1, 2, 3]
 
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here
-      gal = catalog.galaxy(index, noise_pad_size=p.stamp_size * p.pixel_scale)
+      gal = catalog.makeGalaxy(ind, noise_pad_size=p.stamp_size * p.pixel_scale)
 
       psf = gal.original_psf
 

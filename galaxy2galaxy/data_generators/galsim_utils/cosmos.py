@@ -3,7 +3,7 @@ import numpy as np
 import os
 import sys
 import tensorflow as tf
-from collections import namedtuple
+import argparse
 
 __all__ = ['maybe_download_cosmos']
 
@@ -23,8 +23,11 @@ def maybe_download_cosmos(target_dir, sample="25.2"):
     file_name = os.path.basename(url)
     target = os.path.join(target_dir, file_name)
     unpack_dir = target[:-len('.tar.gz')]
-    args = {'quiet': True, 'force': False, 'verbosity': 2}
-    args = namedtuple('Args', args.keys())(*args.values())
+    args = argparse.Namespace()
+    args.quiet = True
+    args.force = False
+    args.verbosity = 2
+    args.save = True
 
     # Download the tarball
     new_download, target, meta = galsim.download_cosmos.download(url, target,
