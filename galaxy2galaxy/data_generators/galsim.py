@@ -26,7 +26,9 @@ class GalsimProblem(problem.Problem):
   # START: Subclass interface
   @property
   def dataset_splits(self):
-    """Splits of data to produce and number of output shards for each."""
+    """Splits of data to produce and number of output shards for each.
+       Note that each shard will be produced in parallel.
+    """
     return [{
         "split": problem.DatasetSplit.TRAIN,
         "shards": 1,
@@ -83,14 +85,14 @@ class GalsimProblem(problem.Problem):
                 image_key="image/encoded",
                 format_key="image/format",
                 channels=self.num_bands,
-                #shape=[p.pixel_size, p.pixel_size, self.num_channels],
+                shape=[p.pixel_size, p.pixel_size, self.num_bands],
                 dtype=tf.float32),
 
         "psf": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="psf/encoded",
                 format_key="psf/format",
                 channels=self.num_bands,
-                #shape=[p.pixel_size, p.pixel_size, self.num_channels],
+                shape=[p.pixel_size, p.pixel_size, self.num_bands],
                 dtype=tf.float32),
     }
 
@@ -157,8 +159,33 @@ class GalsimProblem(problem.Problem):
 class GalsimCosmos(GalsimProblem):
   """
   Subclass of GalSim problem implementing drawing galaxies from the COSMOS
-  dataset.
+  25.2 sample.
   """
+  @property
+  def dataset_splits(self):
+    """Splits of data to produce and number of output shards for each.
+       Note that each shard will be produced in parallel.
+       We are going to split the GalSim data into shards of 1000 galaxies each,
+       with 80 shards for training, 2 shards for validation.
+    """
+    return [{
+        "split": problem.DatasetSplit.TRAIN,
+        "shards": 80,
+    }, {
+        "split": problem.DatasetSplit.EVAL,
+        "shards": 2,
+    }]
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.03
+    p.stamp_size = 64
+    p.example_per_shard = 1000
+
+  @property
+  def num_bands(self):
+    """Number of bands."""
+    return 1
 
   def generator(self, tmp_dir, task_id=-1):
     """
@@ -166,12 +193,18 @@ class GalsimCosmos(GalsimProblem):
     """
     p = self.get_hparams()
     catalog = galsim.COSMOSCatalog(dir=tmp_dir+'/COSMOS_25.2_training_sample')
-    index = [1, 2, 3]
+
+    # Create a list of galaxy indices for this task, remember, there is a task
+    # per shard, each shard is 1000 galaxies.
+    assert(task_id > -1)
+    index = range(task_id*p.example_per_shard,
+                  min((task_id+1)*p.example_per_shard, catalog.getNObjects()))
 
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here
       gal = catalog.makeGalaxy(ind, noise_pad_size=p.stamp_size * p.pixel_scale)
 
+      # We apply the orginal psf
       psf = gal.original_psf
 
       # Utility function encodes the postage stamp for serialized features
