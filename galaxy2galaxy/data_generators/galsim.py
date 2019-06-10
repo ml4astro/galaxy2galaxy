@@ -9,6 +9,7 @@ from . import galsim_utils
 from tensor2tensor.data_generators import generator_utils
 from tensor2tensor.data_generators import image_utils
 from tensor2tensor.data_generators import problem
+from tensor2tensor.layers import modalities
 from tensor2tensor.utils import registry
 from tensor2tensor.utils import metrics
 
@@ -40,7 +41,7 @@ class GalsimProblem(problem.Problem):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = 0.03
-    p.stamp_size = 64
+    p.img_len = 64
 
   @property
   def num_bands(self):
@@ -85,21 +86,21 @@ class GalsimProblem(problem.Problem):
                 image_key="image/encoded",
                 format_key="image/format",
                 channels=self.num_bands,
-                shape=[p.pixel_size, p.pixel_size, self.num_bands],
+                shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
         "psf": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="psf/encoded",
                 format_key="psf/format",
                 channels=self.num_bands,
-                shape=[p.pixel_size, p.pixel_size, self.num_bands],
+                shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
     }
 
     return data_fields, data_items_to_decoders
 
   def eval_metrics(self):
-    eval_metrics = [metrics.Metrics.IMAGE_RMSE, metrics.Metrics.IMAGE_SUMMARY]
+    eval_metrics = [metrics.Metrics.IMAGE_RMSE]
     return eval_metrics
 
   @property
@@ -179,7 +180,7 @@ class GalsimCosmos(GalsimProblem):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = 0.03
-    p.stamp_size = 64
+    p.img_len = 64
     p.example_per_shard = 1000
 
   @property
@@ -202,12 +203,38 @@ class GalsimCosmos(GalsimProblem):
 
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here
-      gal = catalog.makeGalaxy(ind, noise_pad_size=p.stamp_size * p.pixel_scale)
+      gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
 
       # We apply the orginal psf
       psf = gal.original_psf
 
       # Utility function encodes the postage stamp for serialized features
       yield galsim_utils.draw_and_encode_stamp(gal, psf,
-                                               stamp_size=p.stamp_size,
+                                               stamp_size=p.img_len,
                                                pixel_scale=p.pixel_scale)
+
+@registry.register_problem
+class GalsimCosmos32(GalsimCosmos):
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "targets": None}
+    p.pixel_scale = 0.06
+    p.img_len = 32
+    p.example_per_shard = 1000
+
+@registry.register_problem
+class Img2imgGalsimCosmos32(GalsimCosmos32):
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    image = example["inputs"]
+
+    # Clip to 1 the values of the image
+    image = tf.clip_by_value(image, -1, 1)
+
+    example["inputs"] = image
+    example["targets"] = image
+    return example

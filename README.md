@@ -11,3 +11,4 @@ To generate the COSMOS 25.2 sample at native pixel scale and stamp size:
 $ t2t-datagen --t2t_usr_dir=galaxy2galaxy/data_generators --problem=galsim_cosmos --data_dir=/data2/g2g/cosmos
 ```
 This uses GalSim to draw postage stamps and save them in TFRecord format which can then be used for training.
+
