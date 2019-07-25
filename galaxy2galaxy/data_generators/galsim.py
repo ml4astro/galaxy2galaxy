@@ -220,8 +220,8 @@ class GalsimCosmos32(GalsimCosmos):
     p = defaults
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
-    p.vocab_size = {"inputs": None,
-                    "targets": None}
+    p.vocab_size = {"inputs": 1,
+                    "targets": 1}
     p.pixel_scale = 0.06
     p.img_len = 32
     p.example_per_shard = 1000

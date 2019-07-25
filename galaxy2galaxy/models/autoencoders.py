@@ -27,7 +27,7 @@ class AutoencoderResidualVAEContinuous(autoencoders.AutoencoderResidualVAE):
     renconstr, losses = super().body(features)
     # Replaces the training loss by the right reconstruction loss
     if "training" in losses:
-      labels = features["targets_raw"]
+      labels = features["targets"]
       losses['training'] = tf.losses.mean_squared_error(y, reconstr)
     return renconstr, losses
 
