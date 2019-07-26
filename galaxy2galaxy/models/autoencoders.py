@@ -251,11 +251,7 @@ class ContinuousAutoencoderResidual(ContinuousAutoencoderBasic):
             if is_training:  # Mix at the beginning of training.
               rand = tf.random_uniform(common_layers.shape_list(x_mix))
               x_mix = tf.where(tf.less(rand, nomix_p), x_mix, enc_x)
-            if hparams.gan_loss_factor != 0:
-              x_gan = x[enc_shape[0]:, :enc_shape[1], :enc_shape[2], :]
-              x = tf.concat([x_mix, x_gan], axis=0)
-            else:
-              x = x_mix
+            x = x_mix
       return x
 
 
