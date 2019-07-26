@@ -193,7 +193,12 @@ class GalsimCosmos(GalsimProblem):
     Generates and yields postage stamps obtained with GalSim.
     """
     p = self.get_hparams()
-    catalog = galsim.COSMOSCatalog(dir=tmp_dir+'/COSMOS_25.2_training_sample')
+    try:
+        # try to use default galsim path to the data
+        catalog = galsim.COSMOSCatalog()
+    except:
+        # If that fails, tries to use the specified tmp_dir
+        catalog = galsim.COSMOSCatalog(dir=tmp_dir+'/COSMOS_25.2_training_sample')
 
     # Create a list of galaxy indices for this task, remember, there is a task
     # per shard, each shard is 1000 galaxies.
