@@ -12,6 +12,7 @@ def maybe_download_cosmos(target_dir, sample="25.2"):
     """
     Checks for already accessible cosmos data, downloads it somewhere otherwise
     """
+
     import logging
     logging_level = logging.INFO
 
@@ -19,7 +20,17 @@ def maybe_download_cosmos(target_dir, sample="25.2"):
     logging.basicConfig(format="%(message)s", level=logging_level, stream=sys.stdout)
     logger = logging.getLogger('galaxy2galaxy:galsim')
 
-    url = "http://great3.jb.man.ac.uk/leaderboard/data/public/COSMOS_%s_training_sample.tar.gz"%(sample)
+    try:
+        catalog = galsim.COSMOSCatalog(sample=sample)
+        return
+    except:
+        try:
+            catalog = galsim.COSMOSCatalog(sample=sample, dir=target_dir)
+            return
+        except:
+            logger.info("Couldn't access dataset, re-downloading")
+
+    url = "https://zenodo.org/record/3242143/files/COSMOS_%s_training_sample.tar.gz"%(sample)
     file_name = os.path.basename(url)
     target = os.path.join(target_dir, file_name)
     unpack_dir = target[:-len('.tar.gz')]
