@@ -61,7 +61,7 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
       tf.logging.info("Not generating image summary, maybe not an image.")
       return
     return tf.summary.image(
-        name, pack_images(tensor, rows, cols),
+        name, pack_images(image_logits, rows, cols),
         #common_layers.tpu_safe_image_summary(pack_images(tensor, rows, cols)),
         max_outputs=max_outputs)
 
