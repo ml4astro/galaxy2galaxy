@@ -8,7 +8,7 @@ learning models applied to astronomical image processing problems.
 To generate the COSMOS 25.2 sample at native pixel scale and stamp size:
 
 ```bash
-$ t2t-datagen --t2t_usr_dir=galaxy2galaxy/data_generators --problem=galsim_cosmos32 --data_dir=/data2/g2g/cosmos32
+$ t2t-datagen --t2t_usr_dir=galaxy2galaxy/data_generators --problem=img2img_galsim_cosmos32 --data_dir=/data2/g2g/cosmos32
 ```
 This uses GalSim to draw postage stamps and save them in TFRecord format which can then be used for training.
 
