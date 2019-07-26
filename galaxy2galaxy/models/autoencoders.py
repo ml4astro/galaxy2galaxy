@@ -37,7 +37,7 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
   """Continuous version of the basic Autoencoder"""
 
   def reconstruction_loss(self, values, targets):
-      return tf.losses.mean_squared_error(values, targets)
+    return tf.losses.mean_squared_error(values, targets)
 
   def body(self, features):
     hparams = self.hparams
@@ -52,9 +52,10 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
       if len(labels.shape) == 5:
         labels = time_to_channels(labels)
       shape = common_layers.shape_list(labels)
-      # x = tf.one_hot(labels, vocab_size)
+      x = tf.expand_dims(labels, axis=-1)
       x = self.embed(x)
       target_codes = x
+      print(x)
       if shape[2] == 1:
         self.is1d = True
       # Run encoder.
@@ -125,13 +126,13 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
     }
 
     reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
-    targets_loss = self.recontruction_loss(reconstr, labels)
+    reconstr = tf.reshape(reconstr, labels_shape)
+    print(res, reconstr, labels)
+    targets_loss = self.reconstruction_loss(reconstr, labels)
     losses["training"] = targets_loss
 
     self.image_summary("ae", reconstr)
-
-    logits = tf.reshape(reconstr, labels_shape)
-    return logits, losses
+    return reconstr, losses
 
 
 @registry.register_model
@@ -492,17 +493,17 @@ def continuous_autoencoder_ordered_discrete():
   return hparams
 
 @registry.register_hparams
-def autoencoder_ordered_discrete_vq():
+def continuous_autoencoder_ordered_discrete_vq():
   """Ordered discrete autoencoder model with VQ bottleneck."""
-  hparams = autoencoder_ordered_discrete()
+  hparams = continuous_autoencoder_ordered_discrete()
   hparams.bottleneck_kind = "vq"
   hparams.bottleneck_bits = 16
   return hparams
 
 @registry.register_hparams
-def autoencoder_discrete_cifar():
+def continuous_autoencoder_discrete_cifar():
   """Discrete autoencoder model for compressing cifar."""
-  hparams = autoencoder_ordered_discrete()
+  hparams = continuous_autoencoder_ordered_discrete()
   hparams.bottleneck_noise = 0.0
   hparams.bottleneck_bits = 90
   hparams.num_hidden_layers = 2
