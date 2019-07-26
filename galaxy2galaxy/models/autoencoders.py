@@ -32,6 +32,22 @@ from  tensor2tensor.models.research import autoencoders
 
 import tensorflow as tf
 
+def pack_images(images, rows, cols):
+    """Helper utility to make a field of images."""
+    shape = tf.shape(images)
+    width = shape[-3]
+    height = shape[-2]
+    depth = shape[-1]
+    images = tf.reshape(images, (-1, width, height, depth))
+    batch = tf.shape(images)[0]
+    rows = tf.minimum(rows, batch)
+    cols = tf.minimum(batch // rows, cols)
+    images = images[:rows * cols]
+    images = tf.reshape(images, (rows, cols, width, height, depth))
+    images = tf.transpose(images, [0, 2, 1, 3, 4])
+    images = tf.reshape(images, [1, rows * width, cols * height, depth])
+    return images
+
 @registry.register_model
 class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
   """Continuous version of the basic Autoencoder"""
@@ -39,14 +55,14 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
   def reconstruction_loss(self, values, targets):
     return tf.losses.mean_squared_error(values, targets)
 
-  def image_summary(self, name, image_logits, max_outputs=1):
+  def image_summary(self, name, image_logits, max_outputs=1, rows=8, cols=8):
     """Helper for image summaries that are safe on TPU."""
     if len(image_logits.get_shape()) != 4:
       tf.logging.info("Not generating image summary, maybe not an image.")
       return
     return tf.summary.image(
-        name,
-        common_layers.tpu_safe_image_summary(tf.clip_by_value(image_logits,0,1)*255),
+        name, pack_images(tensor, rows, cols),
+        #common_layers.tpu_safe_image_summary(pack_images(tensor, rows, cols)),
         max_outputs=max_outputs)
 
   def body(self, features):
