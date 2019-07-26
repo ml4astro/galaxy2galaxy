@@ -46,8 +46,8 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
       return
     return tf.summary.image(
         name,
-        common_layers.tpu_safe_image_summary(image_logits,
-        max_outputs=max_outputs))
+        common_layers.tpu_safe_image_summary(image_logits),
+        max_outputs=max_outputs)
 
   def body(self, features):
     hparams = self.hparams
