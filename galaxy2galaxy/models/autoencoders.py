@@ -39,6 +39,16 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
   def reconstruction_loss(self, values, targets):
     return tf.losses.mean_squared_error(values, targets)
 
+  def image_summary(self, name, image_logits, max_outputs=1):
+    """Helper for image summaries that are safe on TPU."""
+    if len(image_logits.get_shape()) != 4:
+      tf.logging.info("Not generating image summary, maybe not an image.")
+      return
+    return tf.summary.image(
+        name,
+        common_layers.tpu_safe_image_summary(image_logits,
+        max_outputs=max_outputs))
+
   def body(self, features):
     hparams = self.hparams
     is_training = hparams.mode == tf.estimator.ModeKeys.TRAIN

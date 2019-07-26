@@ -100,7 +100,7 @@ class GalsimProblem(problem.Problem):
     return data_fields, data_items_to_decoders
 
   def eval_metrics(self):
-    eval_metrics = [metrics.Metrics.IMAGE_RMSE]
+    eval_metrics = [metrics.Metrics.RMSE]
     return eval_metrics
 
   @property
