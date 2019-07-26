@@ -46,7 +46,7 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
       return
     return tf.summary.image(
         name,
-        common_layers.tpu_safe_image_summary(image_logits),
+        common_layers.tpu_safe_image_summary(tf.clip_by_value(image_logits,0,1)*255),
         max_outputs=max_outputs)
 
   def body(self, features):
@@ -137,10 +137,11 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
 
     reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
     reconstr = tf.reshape(reconstr, labels_shape)
-    print(res, reconstr, labels)
+
     targets_loss = self.reconstruction_loss(reconstr, labels)
     losses["training"] = targets_loss
 
+    self.image_summary("inputs", labels)
     self.image_summary("ae", reconstr)
     return reconstr, losses
 
