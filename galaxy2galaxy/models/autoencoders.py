@@ -53,7 +53,9 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
   """Continuous version of the basic Autoencoder"""
 
   def reconstruction_loss(self, values, targets):
-    return tf.losses.mean_squared_error(values, targets)
+    hparams = self.hparams
+    pz = tf.reduce_sum(tf.abs(values - targets)**2, axis=[-1, -2, -3]) / hparams['reconstruction_loss_sigma']**2
+    return tf.reduce_mean(pz)
 
   def image_summary(self, name, image_logits, max_outputs=1, rows=8, cols=8):
     """Helper for image summaries that are safe on TPU."""
@@ -447,6 +449,7 @@ def continuous_autoencoder_basic():
   hparams.add_hparam("sliced_do_tanh", int(True))
   hparams.add_hparam("code_loss_factor", 1.0)
   hparams.add_hparam("bottleneck_l2_factor", 0.05)
+  hparams.add_hparam("reconstruction_loss_sigma", 0.03)
   return hparams
 
 @registry.register_hparams
