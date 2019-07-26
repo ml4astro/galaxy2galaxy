@@ -54,7 +54,7 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
 
   def reconstruction_loss(self, values, targets):
     hparams = self.hparams
-    pz = tf.reduce_sum(tf.abs(values - targets)**2, axis=[-1, -2, -3]) / hparams['reconstruction_loss_sigma']**2
+    pz = tf.reduce_sum(tf.abs(values - targets)**2, axis=[-1, -2, -3]) / hparams.reconstruction_loss_sigma**2
     return tf.reduce_mean(pz)
 
   def image_summary(self, name, image_logits, max_outputs=1, rows=8, cols=8):
