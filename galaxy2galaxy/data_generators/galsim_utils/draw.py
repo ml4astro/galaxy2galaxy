@@ -15,10 +15,15 @@ def _float_feature(value):
 def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
-def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale):
+def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, parameters=None):
     """
     Draws the galaxy, psf and noise power spectrum on a postage stamp and
     encodes it to be exported in a TFRecord.
+
+    Parameters
+    ----------
+    parameters: `dict`
+        Additional scalar parameters to save for that galaxy
     """
     # Apply the PSF
     gal = galsim.Convolve(gal, psf)
@@ -66,9 +71,16 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale):
     # Apply mask to power spectrum so that it is very large outside maxk
     ps = np.where(mask, np.log(ps**2), 10).astype('float32')
 
-    return {"image/encoded": [im.tostring()],
+    serialized_output = {"image/encoded": [im.tostring()],
             "image/format": ["raw"],
             "psf/encoded": [im_psf.tostring()],
             "psf/format": ["raw"],
             "ps/encoded": [ps.tostring()],
             "ps/format": ["raw"]}
+
+    # Adding the parameters provided
+    if parameters is not None:
+        for k in parameters:
+            serialized_output['params/'+k] = [parameters[k]]
+
+    return serialized_output
