@@ -98,8 +98,11 @@ class GalsimProblem(problem.Problem):
                 format_key="psf/format",
                 channels=self.num_bands,
                 shape=[p.img_len, p.img_len, self.num_bands],
-                dtype=tf.float32),
+                dtype=tf.float32)
     }
+
+    for k in p.cosmos_parameters:
+        data_items_to_decoders[k] = tf.contrib.slim.tfexample_decoder.Tensor('params/'+k)
 
     return data_fields, data_items_to_decoders
 
