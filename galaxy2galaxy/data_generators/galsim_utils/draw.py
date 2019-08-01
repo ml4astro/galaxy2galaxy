@@ -51,22 +51,27 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, parameters=None):
             np.fft.fftshift(imCp.array))).real.astype('float32')
 
     # Compute noise power spectrum
-    ps = gal.noise._get_update_rootps((stamp_size, stamp_size),
+    try:
+        ps = gal.noise._get_update_rootps((stamp_size, stamp_size),
                                       wcs=galsim.PixelScale(pixel_scale))
 
-    # The following comes from correlatednoise.py
-    rt2 = np.sqrt(2.)
-    shape = (stamp_size, stamp_size)
-    ps[0, 0] = rt2 * ps[0, 0]
-    # Then make the changes necessary for even sized arrays
-    if shape[1] % 2 == 0:  # x dimension even
-        ps[0, shape[1] // 2] = rt2 * ps[0, shape[1] // 2]
-    if shape[0] % 2 == 0:  # y dimension even
-        ps[shape[0] // 2, 0] = rt2 * ps[shape[0] // 2, 0]
-        # Both dimensions even
-        if shape[1] % 2 == 0:
-            ps[shape[0] // 2, shape[1] // 2] = rt2 * \
-                ps[shape[0] // 2, shape[1] // 2]
+        # The following comes from correlatednoise.py
+        rt2 = np.sqrt(2.)
+        shape = (stamp_size, stamp_size)
+        ps[0, 0] = rt2 * ps[0, 0]
+        # Then make the changes necessary for even sized arrays
+        if shape[1] % 2 == 0:  # x dimension even
+            ps[0, shape[1] // 2] = rt2 * ps[0, shape[1] // 2]
+        if shape[0] % 2 == 0:  # y dimension even
+            ps[shape[0] // 2, 0] = rt2 * ps[shape[0] // 2, 0]
+            # Both dimensions even
+            if shape[1] % 2 == 0:
+                ps[shape[0] // 2, shape[1] // 2] = rt2 * \
+                    ps[shape[0] // 2, shape[1] // 2]
+
+    except:
+        # In case there is no noise in the images, flat PS
+        ps = np.ones_like(mask)
 
     # Apply mask to power spectrum so that it is very large outside maxk
     ps = np.where(mask, np.log(ps**2), 10).astype('float32')

@@ -231,17 +231,21 @@ class GalsimCosmosConditional(GalsimCosmos):
     Generates and yields postage stamps obtained with GalSim.
     """
     p = self.get_hparams()
-    catalog_real = galsim.COSMOSCatalog(dir=tmp_dir+'/COSMOS_25.2_training_sample')
-    catalog_param = galsim.COSMOSCatalog(dir=tmp_dir+'/COSMOS_25.2_training_sample', use_real=False)
+    try:
+        catalog = galsim.COSMOSCatalog()
+    except:
+        catalog = galsim.COSMOSCatalog(dir=tmp_dir+'/COSMOS_25.2_training_sample')
 
     # Create a list of galaxy indices for this task, remember, there is a task
     # per shard, each shard is 1000 galaxies.
     assert(task_id > -1)
     index = range(task_id*p.example_per_shard,
-                  min((task_id+1)*p.example_per_shard, catalog_param.getNObjects()))
+                  min((task_id+1)*p.example_per_shard, catalog.getNObjects()-1))
 
     # Generate parameter dict.
-    cat_param = catalog_param.param_cat[catalog_param.orig_index]
+    cat_param = catalog.param_cat[catalog.orig_index]
+    from numpy.lib.recfunctions import append_fields
+    import numpy as np
 
     # Extract main parameters from the fits
     bparams = cat_param['bulgefit']
@@ -257,8 +261,8 @@ class GalsimCosmosConditional(GalsimCosmos):
 
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here (can be used with parametric galaxies) Do we need to add noise ?
-      gal_real = catalog_real.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
-      gal_param = catalog_param.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
+      gal_real = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
+      gal_param = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale, gal_type='parametric')
 
       params = cat_param[ind]
       # Saves parameters specified in configuration file
