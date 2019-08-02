@@ -82,8 +82,9 @@ class GalsimProblem(problem.Problem):
     }
 
     # Adds additional fields to be decoded as specified in the configuration
-    for k in p.cosmos_parameters:
-        data_fields['params/'+k] = tf.FixedLenFeature([], tf.float32, -1)
+    if hasattr(p, 'cosmos_parameters'):
+        for k in p.cosmos_parameters:
+            data_fields['params/'+k] = tf.FixedLenFeature([], tf.float32, -1)
 
     data_items_to_decoders = {
         "inputs": tf.contrib.slim.tfexample_decoder.Image(
@@ -101,8 +102,9 @@ class GalsimProblem(problem.Problem):
                 dtype=tf.float32)
     }
 
-    for k in p.cosmos_parameters:
-        data_items_to_decoders[k] = tf.contrib.slim.tfexample_decoder.Tensor('params/'+k)
+    if hasattr(p, 'cosmos_parameters'):
+        for k in p.cosmos_parameters:
+            data_items_to_decoders[k] = tf.contrib.slim.tfexample_decoder.Tensor('params/'+k)
 
     return data_fields, data_items_to_decoders
 
