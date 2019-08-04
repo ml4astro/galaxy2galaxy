@@ -68,9 +68,7 @@ def main(argv):
   for problem in problems:
     set_random_seed()
 
-    if problem in _SUPPORTED_PROBLEM_GENERATORS:
-      generate_data_for_problem(problem)
-    elif problem in registry.list_base_problems():
+    if problem in registry.list_base_problems():
       generate_data_for_registered_problem(problem)
     elif problem in registry.list_env_problems():
       generate_data_for_env_problem(problem)
