@@ -10,8 +10,9 @@ from tensor2tensor.data_generators import generator_utils
 from tensor2tensor.data_generators import image_utils
 from tensor2tensor.data_generators import problem
 from tensor2tensor.layers import modalities
-from tensor2tensor.utils import registry
 from tensor2tensor.utils import metrics
+
+from galaxy2galaxy.utils import registry
 
 import tensorflow as tf
 import galsim

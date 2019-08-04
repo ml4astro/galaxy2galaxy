@@ -28,7 +28,7 @@ from tensor2tensor.layers import modalities
 from tensor2tensor.utils import registry
 from tensor2tensor.utils import t2t_model
 
-from  tensor2tensor.models.research import autoencoders
+from tensor2tensor.models.research import autoencoders
 
 import tensorflow as tf
 
