@@ -3,6 +3,13 @@
 Galaxy2Galaxy, or G2G for short, is a library of models, datasets, and utilities to build generative models for astronomical images, based on the Tensor2Tensor library. Similarly to T2T, the goal of this project is to accelerate research in machine
 learning models applied to astronomical image processing problems.
 
+## Install
+
+G2G can easily be installed using pip:
+```
+$ pip install --user git+https://github.com/ml4astro/galaxy2galaxy
+```
+
 ## Usage
 
 To generate the COSMOS 25.2 sample at native pixel scale and stamp size:
