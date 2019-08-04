@@ -25,10 +25,10 @@ from tensor2tensor.layers import common_layers
 from tensor2tensor.layers import discretization
 from tensor2tensor.layers import latent_layers
 from tensor2tensor.layers import modalities
-from tensor2tensor.utils import registry
 from tensor2tensor.utils import t2t_model
+from tensor2tensor.models.research import autoencoders
 
-from  tensor2tensor.models.research import autoencoders
+from galaxy2galaxy.utils import registry
 
 import tensorflow as tf
 
