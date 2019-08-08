@@ -5,7 +5,7 @@ from __future__ import division
 from __future__ import print_function
 
 from . import hsc_utils
-from . import astro_image_utils
+from . import astroimage_utils
 
 from tensor2tensor.data_generators import generator_utils
 from tensor2tensor.data_generators import image_utils
@@ -36,7 +36,7 @@ def _resize_image(im, size):
   return cropped
 
 @registry.register_problem
-class HSCProblem(astro_image_utils.AstroImageProblem):
+class HSCProblem(astroimage_utils.AstroImageProblem):
   """Base class for image problems created from HSC Public Data Release.
   """
 
@@ -95,7 +95,6 @@ class HSCProblem(astro_image_utils.AstroImageProblem):
                                  filters=p.filters,
                                  data_release=p.data_release,
                                  rerun=p.rerun)
-
 
 @registry.register_problem
 class HSCAnomaly(HSCProblem):

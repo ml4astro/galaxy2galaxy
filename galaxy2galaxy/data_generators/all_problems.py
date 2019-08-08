@@ -8,7 +8,7 @@ import six
 from six.moves import range  # pylint: disable=redefined-builtin
 
 MODULES = [
-    "galaxy2galaxy.data_generators.galsim",
+    "galaxy2galaxy.data_generators.cosmos",
     "galaxy2galaxy.data_generators.hsc"
 ]
 ALL_MODULES = list(MODULES)
