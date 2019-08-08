@@ -45,7 +45,7 @@ class HSCProblem(astro_image_utils.AstroImageProblem):
     p = defaults
     p.img_len = 64
     p.filters = ['HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z']
-    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_anomaly.sql')
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_anomaly_test.sql')
     p.data_release = 'pdr2'
     p.rerun = 'pdr2_wide'
 
@@ -95,3 +95,17 @@ class HSCProblem(astro_image_utils.AstroImageProblem):
                                  filters=p.filters,
                                  data_release=p.data_release,
                                  rerun=p.rerun)
+
+
+@registry.register_problem
+class HSCAnomaly(HSCProblem):
+  """ Dataset for anomaly detection on HSC data.
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.img_len = 96
+    p.filters = ['HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z']
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_anomaly.sql')
+    p.data_release = 'pdr2'
+    p.rerun = 'pdr2_wide'
