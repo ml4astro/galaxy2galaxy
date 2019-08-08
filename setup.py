@@ -22,6 +22,8 @@ setup(
         'tensor2tensor',
         'tensorflow-datasets',
         'tensorflow-probability',
+        'fits2hdf',
+        'unagi'
     ],
     extras_require={
         'tensorflow': ['tensorflow>=1.13.1'],
