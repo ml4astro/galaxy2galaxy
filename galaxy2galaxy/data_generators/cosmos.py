@@ -74,6 +74,22 @@ class GalsimCosmos64(galsim_utils.GalsimProblem):
     index = range(task_id*p.example_per_shard,
                   min((task_id+1)*p.example_per_shard, catalog.getNObjects()))
 
+    # Extracts additional information about the galaxies
+    cat_param = catalog.param_cat[catalog.orig_index]
+    from numpy.lib.recfunctions import append_fields
+    import numpy as np
+
+    bparams = cat_param['bulgefit']
+    sparams = cat_param['sersicfit']
+    cat_param = append_fields(cat_param, 'bulge_q', bparams[:,11])
+    cat_param = append_fields(cat_param, 'bulge_beta', bparams[:,15])
+    cat_param = append_fields(cat_param, 'disk_q', bparams[:,3])
+    cat_param = append_fields(cat_param, 'disk_beta', bparams[:,7])
+    cat_param = append_fields(cat_param, 'bulge_hlr', cat_param['hlr'][:,1])
+    cat_param = append_fields(cat_param, 'bulge_flux_log10', np.where(cat_param['use_bulgefit'] ==1, np.log10(cat_param['flux'][:,1]), np.zeros(len(cat_param) )))
+    cat_param = append_fields(cat_param, 'disk_hlr', cat_param['hlr'][:,2])
+    cat_param = append_fields(cat_param, 'disk_flux_log10', np.where(cat_param['use_bulgefit'] ==1, np.log10(cat_param['flux'][:,2]), np.log10(cat_param['flux'][:,0])))
+
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here
       gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
@@ -81,10 +97,18 @@ class GalsimCosmos64(galsim_utils.GalsimProblem):
       # We apply the orginal psf
       psf = gal.original_psf
 
+      # We save the corresponding attributes for this galaxy
+      if hasattr(p, 'attributes'):
+        params = cat_param[ind]
+        attributes = {k: params[k] for k in p.attributes}
+      else:
+        attributes = None
+
       # Utility function encodes the postage stamp for serialized features
       yield galsim_utils.draw_and_encode_stamp(gal, psf,
                                                stamp_size=p.img_len,
-                                               pixel_scale=p.pixel_scale)
+                                               pixel_scale=p.pixel_scale,
+                                               attributes=attributes)
 
   def preprocess_example(self, example, unused_mode, unused_hparams):
     """ Preprocess the examples, can be used for further augmentation or

@@ -186,6 +186,11 @@ class AstroImageProblem(problem.Problem):
         "image/format": tf.FixedLenFeature((), tf.string),
     }
 
+    # Adds additional attributes to be decoded as specified in the configuration
+    if hasattr(p, 'attributes'):
+        for k in p.attributes:
+            data_fields['attrs/'+k] = tf.FixedLenFeature([], tf.float32, -1)
+
     data_items_to_decoders = {
         "inputs": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="image/encoded",
@@ -194,6 +199,10 @@ class AstroImageProblem(problem.Problem):
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
     }
+
+    if hasattr(p, 'attributes'):
+        for k in p.attributes:
+            data_items_to_decoders[k] = tf.contrib.slim.tfexample_decoder.Tensor('attrs/'+k)
 
     return data_fields, data_items_to_decoders
 
