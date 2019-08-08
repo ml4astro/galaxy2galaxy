@@ -18,6 +18,7 @@ from galaxy2galaxy.utils import registry
 import tensorflow as tf
 import numpy as np
 import fits2hdf.pyhdfits as fits
+from astropy.table import Table
 import h5py
 import os
 
@@ -36,7 +37,7 @@ def _resize_image(im, size):
   return cropped
 
 @registry.register_problem
-class HSCProblem(astroimage_utils.AstroImageProblem):
+class Img2imgHSC(astroimage_utils.AstroImageProblem):
   """Base class for image problems created from HSC Public Data Release.
   """
 
@@ -45,7 +46,7 @@ class HSCProblem(astroimage_utils.AstroImageProblem):
     p = defaults
     p.img_len = 64
     p.filters = ['HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z']
-    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_anomaly_test.sql')
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_img2img.sql')
     p.data_release = 'pdr2'
     p.rerun = 'pdr2_wide'
 
@@ -62,19 +63,45 @@ class HSCProblem(astroimage_utils.AstroImageProblem):
 
     # Step 1: Maybe regenerate the dataset
     self.maybe_build_dataset(tmp_dir)
+    import timeit
 
     # Step 2: Extract postage stamps, resize them to requested size
+    catalog = Table.read(os.path.join(tmp_dir, 'catalog.fits'))
     with h5py.File(os.path.join(tmp_dir, 'cutouts.hdf'),'r') as cutouts:
         # Loop through the examples, resize cutout to desired size
-        for object_id in cutouts.keys():
-          cutout = cutouts[object_id]
-          im = [fits.open(cutout[f])[3].data for f in p.filters]
+        for row in catalog:
+          cutout = cutouts[str(row['object_id'])]
+          im = [cutout[f]['HDU0']['DATA'][:] for f in p.filters]
           im = np.stack(im, axis=-1).astype('float32')
+
           # Images may not have exactly the right number of pixels
           im = _resize_image(im, p.img_len)
 
-          yield {"image/encoded": [im.tostring()],
-                 "image/format": ["raw"]}
+          serialized_output = {"image/encoded": [im.tostring()],
+                               "image/format": ["raw"]}
+
+          # If attributes are requested, let's add them to the dataset
+          if hasattr(p, 'attributes'):
+            for k in p.attributes:
+              serialized_output['attrs/'+k] = [np.asscalar(row[k])]
+
+          yield serialized_output
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Preprocess the examples, can be used for further augmentation or
+    image standardization.
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    # TODO: apply some pre-processing/normalization to the images
+
+    if hasattr(p, 'attributes'):
+      example["attributes"] = tf.stack([example[k] for k in p.attributes])
+
+    example["inputs"] = image
+    example["targets"] = image
+    return example
 
   # END: Subclass interface
   @property
@@ -97,7 +124,7 @@ class HSCProblem(astroimage_utils.AstroImageProblem):
                                  rerun=p.rerun)
 
 @registry.register_problem
-class HSCAnomaly(HSCProblem):
+class Img2imgHSCAnomaly(Img2imgHSC):
   """ Dataset for anomaly detection on HSC data.
   """
 
@@ -105,6 +132,7 @@ class HSCAnomaly(HSCProblem):
     p = defaults
     p.img_len = 96
     p.filters = ['HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z']
-    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_anomaly.sql')
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_anomaly.sql')
     p.data_release = 'pdr2'
     p.rerun = 'pdr2_wide'
+    p.attributes = ['g_cmodel_mag', 'r_cmodel_mag', 'i_cmodel_mag', 'z_cmodel_mag']

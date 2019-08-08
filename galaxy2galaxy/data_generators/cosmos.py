@@ -20,10 +20,10 @@ import galsim
 
 
 @registry.register_problem
-class GalsimCosmos64(galsim_utils.GalsimProblem):
+class Img2imgCosmos(galsim_utils.GalsimProblem):
   """
-  Subclass of GalSim problem implementing drawing galaxies from the COSMOS
-  25.2 sample.
+  Img2img problem on GalSim's COSMOS 25.2 sample, at native pixel resolution,
+  on 64px postage stamps.
   """
 
   @property
@@ -114,17 +114,44 @@ class GalsimCosmos64(galsim_utils.GalsimProblem):
     """ Preprocess the examples, can be used for further augmentation or
     image standardization.
     """
+    p = self.get_hparams()
     image = example["inputs"]
 
     # Clip to 1 the values of the image
     image = tf.clip_by_value(image, -1, 1)
+
+    # Aggregate the conditions
+    if hasattr(p, 'attributes'):
+      example['attributes'] = tf.stack([example[k] for k in p.attributes])
 
     example["inputs"] = image
     example["targets"] = image
     return example
 
 @registry.register_problem
-class GalsimCosmos32(GalsimCosmos64):
+class Attrs2imgCosmos(Img2imgCosmos):
+  """ Conditional image generation problem based on COSMOS sample.
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.03
+    p.img_len = 64
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+    p.attributes = ['mag_auto', 'flux_radius', 'zphot', 'bulge_q', 'bulge_beta' ,
+                    'disk_q', 'disk_beta', 'bulge_hlr', 'disk_hlr']
+
+@registry.register_problem
+class Img2imgCosmos32(Img2imgCosmos):
+  """ Smaller version of the Img2imgCosmos problem, at half the pixel
+  resolution
+  """
 
   def hparams(self, defaults, model_hparams):
     p = defaults
@@ -135,3 +162,22 @@ class GalsimCosmos32(GalsimCosmos64):
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
                     "targets": None}
+
+@registry.register_problem
+class Attrs2imgCosmos32(Attrs2imgCosmos):
+  """ Lower resolution equivalent of conditional generation problem.
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.06
+    p.img_len = 32
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+    p.attributes = ['mag_auto', 'flux_radius', 'zphot', 'bulge_q', 'bulge_beta' ,
+                    'disk_q', 'disk_beta', 'bulge_hlr', 'disk_hlr']

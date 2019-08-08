@@ -1,5 +1,3 @@
--- Author: Kate Storey-Fisher @kstoreyf
-
 SELECT
 
     -- Basic information
@@ -140,4 +138,4 @@ AND NOT f1.y_pixelflags_bright_object
 AND f1.i_cmodel_mag < 20.5
 AND f1.i_cmodel_mag >= 20.0
 
-LIMIT 100
+LIMIT 1000
