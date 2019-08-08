@@ -44,7 +44,7 @@ class HSCProblem(astro_image_utils.AstroImageProblem):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.img_len = 64
-    p.filters = ['HSC-I']
+    p.filters = ['HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z']
     p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_anomaly.sql')
     p.data_release = 'pdr2'
     p.rerun = 'pdr2_wide'
