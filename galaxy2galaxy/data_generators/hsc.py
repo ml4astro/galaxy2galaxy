@@ -63,7 +63,7 @@ class HSCProblem(astro_image_utils.AstroImageProblem):
     # Step 1: Maybe regenerate the dataset
     self.maybe_build_dataset(tmp_dir)
 
-    # Step 2: Extract postage stamps
+    # Step 2: Extract postage stamps, resize them to requested size
     with h5py.File(os.path.join(tmp_dir, 'cutouts.hdf'),'r') as cutouts:
         # Loop through the examples, resize cutout to desired size
         for object_id in cutouts.keys():
