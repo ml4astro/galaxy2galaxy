@@ -179,6 +179,10 @@ class SnGAN(vanilla_gan.AbstractGAN):
                     generator_loss_fn=softplus_generator_loss,
                     discriminator_loss_fn=softplus_discriminator_loss)
 
+    losses = {'training': losses.generator_loss + losses.discriminator_loss,
+              'gen_loss': losses.generator_loss,
+              'disc_loss': losses.discriminator_loss}
+
     summary_g_image = tf.reshape(
         generated_images[0, :], [1] + common_layers.shape_list(real_data)[1:])
     tf.summary.image("generated", summary_g_image, max_outputs=1)
@@ -186,11 +190,6 @@ class SnGAN(vanilla_gan.AbstractGAN):
     if is_training:  # Returns an dummy output and the losses dictionary.
       return tf.zeros_like(real_data), losses
     return tf.reshape(generated_images, tf.shape(real_data)), losses
-
-  def top(self, body_output, features):
-    """Override the top function to not do anything."""
-    return body_output
-
 
 @registry.register_hparams
 def sn_gan():
