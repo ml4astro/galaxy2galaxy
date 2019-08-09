@@ -137,6 +137,12 @@ class Img2imgHSCAnomaly(Img2imgHSC):
     p.data_release = 'pdr2'
     p.rerun = 'pdr2_wide'
     p.attributes = ['g_cmodel_mag', 'r_cmodel_mag', 'i_cmodel_mag', 'z_cmodel_mag']
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
 
   def preprocess_example(self, example, unused_mode, unused_hparams):
     """ Luptonize the examples, so that we can use t2t models easily
@@ -147,12 +153,13 @@ class Img2imgHSCAnomaly(Img2imgHSC):
     # Apply Luptonic Asinh stretch, and return uint8 rgb images
     def my_func(x):
       return make_lupton_rgb(x[...,2], x[...,1], x[...,0], Q=15, stretch=0.5, minimum=0)
-    
-    image = tf.py_func(my_func, [image], tf.uint8)
+
+    int_image = tf.py_func(my_func, [image], tf.uint8)
+    int_image.set_shape(image.shape)
 
     if hasattr(p, 'attributes'):
       example["attributes"] = tf.stack([example[k] for k in p.attributes])
 
-    example["inputs"] = image
-    example["targets"] = image
+    example["inputs"] = int_image
+    example["targets"] = int_image
     return example
