@@ -104,7 +104,6 @@ class SnGAN(vanilla_gan.AbstractGAN):
       net = tf.layers.flatten(net)
       net = tf.layers.dense(net, output_size, name="d_fc3",
                            kernel_constraint=SperctraNormConstraint(sn_update, name='u7'))  # [bs, 1024]
-      net = lrelu(net)
       return net
 
   def generator(self, z, is_training, out_shape):
