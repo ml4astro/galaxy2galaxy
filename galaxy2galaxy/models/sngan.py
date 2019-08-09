@@ -50,12 +50,14 @@ def pack_images(images, rows, cols):
     images = tf.reshape(images, [1, rows * width, cols * height, depth])
     return images
 
+
 @registry.register_model
-class SnGAN(vanilla_gan.AbstractGAN):
-  """Spectral Norm GAN"""
+class SlicedGanLarge(vanilla_gan.SlicedGan):
+    """ Customized sliced gan for larger images
+    """
 
   def discriminator(self, x, is_training, reuse=False,
-                    output_size=1):
+                    output_size=1024):
     """Discriminator architecture with Spectral Normalization.
 
     Args:
@@ -71,39 +73,44 @@ class SnGAN(vanilla_gan.AbstractGAN):
         "discriminator", reuse=reuse,
         initializer=tf.random_normal_initializer(stddev=0.02)):
       batch_size, height, width = common_layers.shape_list(x)[:3]
-      sn_update = is_training and (not reuse)
 
       # Mapping x from [bs, h, w, c] to [bs, 1]
       net = tf.layers.conv2d(x, 32, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv1",
-                             kernel_constraint=SperctraNormConstraint(sn_update, name='u1'))
+                             padding="SAME", name="d_conv1")
       net = lrelu(net)
       net = tf.layers.conv2d(net, 64, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv1b",
-                             kernel_constraint=SperctraNormConstraint(sn_update, name='u2'))
+                             padding="SAME", name="d_conv1b")
+      if hparams.discriminator_batchnorm:
+        net = tf.layers.batch_normalization(net, training=is_training,
+                                            momentum=0.999, name="d_bn1")
       # [bs, h/2, w/2, 64]
       net = lrelu(net)
       net = tf.layers.conv2d(net, 64, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv2",
-                             kernel_constraint=SperctraNormConstraint(sn_update, name='u3'))
+                             padding="SAME", name="d_conv2")
       net = lrelu(net)
       net = tf.layers.conv2d(net, 128, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv2b",
-                             kernel_constraint=SperctraNormConstraint(sn_update, name='u4'))
+                             padding="SAME", name="d_conv2b")
+      if hparams.discriminator_batchnorm:
+        net = tf.layers.batch_normalization(net, training=is_training,
+                                            momentum=0.999, name="d_bn2")
       # [bs, h/4, w/4, 128]
       net = lrelu(net)
       net = tf.layers.conv2d(net, 128, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv3",
-                             kernel_constraint=SperctraNormConstraint(sn_update, name='u5'))
+                             padding="SAME", name="d_conv3")
       net = lrelu(net)
       net = tf.layers.conv2d(net, 256, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv3b",
-                             kernel_constraint=SperctraNormConstraint(sn_update, name='u6'))
+                             padding="SAME", name="d_conv3b")
+      if hparams.discriminator_batchnorm:
+        net = tf.layers.batch_normalization(net, training=is_training,
+                                            momentum=0.999, name="d_bn3")
       # [bs, h/8, w/8, 256]
       net = lrelu(net)
       net = tf.layers.flatten(net)
-      net = tf.layers.dense(net, output_size, name="d_fc3",
-                           kernel_constraint=SperctraNormConstraint(sn_update, name='u7'))  # [bs, 1024]
+      net = tf.layers.dense(net, output_size, name="d_fc3")  # [bs, 1024]
+      if hparams.discriminator_batchnorm:
+        net = tf.layers.batch_normalization(net, training=is_training,
+                                            momentum=0.999, name="d_bn3")
+      net = lrelu(net)
       return net
 
   def generator(self, z, is_training, out_shape):
@@ -157,6 +164,10 @@ class SnGAN(vanilla_gan.AbstractGAN):
       out = tf.nn.sigmoid(net)
       return common_layers.convert_real_to_rgb(out)
 
+@registry.register_model
+class SnGAN(SlicedGanLarge):
+  """Spectral Norm GAN"""
+
   def body(self, features):
     """Body of the model.
 
@@ -183,8 +194,8 @@ class SnGAN(vanilla_gan.AbstractGAN):
     generated_images = vanilla_gan.reverse_gradient(self.generator(generator_inputs, is_training, out_shape))
 
     tf.logging.info("Shape of generated images", generated_images.shape )
-    discriminator_gen_outputs = self.discriminator(common_layers.convert_rgb_to_symmetric_real(generated_images), is_training)
-    discriminator_real_outputs = self.discriminator(common_layers.convert_rgb_to_symmetric_real(real_data), is_training, reuse=True)
+    discriminator_gen_outputs = self.discriminator(common_layers.convert_rgb_to_symmetric_real(generated_images), is_training, output_size=1)
+    discriminator_real_outputs = self.discriminator(common_layers.convert_rgb_to_symmetric_real(real_data), is_training, reuse=True, output_size=1)
 
     gan_model = tfgan.GANModel(
         generator_inputs, generated_images,
@@ -211,8 +222,8 @@ class SnGAN(vanilla_gan.AbstractGAN):
     return tf.reshape(generated_images, tf.shape(real_data)), losses
 
 @registry.register_hparams
-def sn_gan():
-  """Basic parameters for a spectral norm gan."""
+def gan_large():
+  """Basic parameters for large gan."""
   hparams = common_hparams.basic_params1()
   hparams.optimizer = "adam"
   hparams.learning_rate_constant = 0.0002
