@@ -104,7 +104,6 @@ class SnGAN(vanilla_gan.AbstractGAN):
       net = tf.layers.flatten(net)
       net = tf.layers.dense(net, output_size, name="d_fc3",
                            kernel_constraint=SperctraNormConstraint(sn_update, name='u7'))  # [bs, 1024]
-      net = lrelu(net)
       return net
 
   def generator(self, z, is_training, out_shape):
@@ -126,23 +125,31 @@ class SnGAN(vanilla_gan.AbstractGAN):
       # Size [6, 6, 128]
 
       net = tf.layers.conv2d_transpose(net, 128, 4, strides=2,
-                                       padding='SAME', use_bias=False, name='conv2') # output_size 16x16
-      net = residual_conv(net, 1, 2, hparams, "res_block")
+                                       padding='SAME', use_bias=False, name='conv1') # output_size 16x16
+      net = tf.layers.batch_normalization(net, training=is_training,
+                                          momentum=0.999, name="conv_bn1")
+      net = lrelu(net)
 
       # Size [12, 12, 128]
       net = tf.layers.conv2d_transpose(net, 128, 4, strides=2,
                                        padding='SAME', use_bias=False, name='conv2') # output_size 16x16
-      net = residual_conv(net, 1, 2, hparams, "res_block2")
+      net = tf.layers.batch_normalization(net, training=is_training,
+                                          momentum=0.999, name="conv_bn2")
+      net = lrelu(net)
 
       # Size [24, 24, 128]
       net = tf.layers.conv2d_transpose(net, 128, 4, strides=2,
                                        padding='SAME', use_bias=False, name='conv3') # output_size 16x16
-      net = residual_conv(net, 1, 2, hparams, "res_block3")
+      net = tf.layers.batch_normalization(net, training=is_training,
+                                          momentum=0.999, name="conv_bn3")
+      net = lrelu(net)
 
       # Size [48, 48, 128]
       net = tf.layers.conv2d_transpose(net, 128, 4, strides=2,
                                        padding='SAME', use_bias=False, name='conv4') # output_size 16x16
-      net = residual_conv(net, 1, 2, hparams, "res_block4")
+      net = tf.layers.batch_normalization(net, training=is_training,
+                                          momentum=0.999, name="conv_bn4")
+      net = lrelu(net)
 
       # Final convolutionn to [96, 96, 3]
       net = tf.layers.conv2d(net, 3, (3,3), padding='SAME', name='output_conv')
