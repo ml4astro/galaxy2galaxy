@@ -53,8 +53,8 @@ def pack_images(images, rows, cols):
 
 @registry.register_model
 class SlicedGanLarge(vanilla_gan.SlicedGan):
-    """ Customized sliced gan for larger images
-    """
+  """ Customized sliced gan for larger images
+  """
 
   def discriminator(self, x, is_training, reuse=False,
                     output_size=1024):
