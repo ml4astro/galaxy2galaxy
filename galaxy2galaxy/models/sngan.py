@@ -33,6 +33,23 @@ from tensor2tensor.layers.common_layers import lrelu
 from galaxy2galaxy.utils import registry
 from galaxy2galaxy.models.gan_utils import softplus_discriminator_loss, softplus_generator_loss, SperctraNormConstraint
 
+
+def pack_images(images, rows, cols):
+    """Helper utility to make a field of images."""
+    shape = tf.shape(images)
+    width = shape[-3]
+    height = shape[-2]
+    depth = shape[-1]
+    images = tf.reshape(images, (-1, width, height, depth))
+    batch = tf.shape(images)[0]
+    rows = tf.minimum(rows, batch)
+    cols = tf.minimum(batch // rows, cols)
+    images = images[:rows * cols]
+    images = tf.reshape(images, (rows, cols, width, height, depth))
+    images = tf.transpose(images, [0, 2, 1, 3, 4])
+    images = tf.reshape(images, [1, rows * width, cols * height, depth])
+    return images
+
 @registry.register_model
 class SnGAN(vanilla_gan.AbstractGAN):
   """Spectral Norm GAN"""
@@ -159,21 +176,14 @@ class SnGAN(vanilla_gan.AbstractGAN):
     generated_images = vanilla_gan.reverse_gradient(self.generator(generator_inputs, is_training, out_shape))
 
     tf.logging.info("Shape of generated images", generated_images.shape )
-    discriminator_gen_outputs = self.discriminator(generated_images, is_training)
-    discriminator_real_outputs = self.discriminator(real_data, is_training, reuse=True)
+    discriminator_gen_outputs = self.discriminator(common_layers.convert_rgb_to_symmetric_real(generated_images), is_training)
+    discriminator_real_outputs = self.discriminator(common_layers.convert_rgb_to_symmetric_real(real_data), is_training, reuse=True)
 
     gan_model = tfgan.GANModel(
-        generator_inputs,
-        generated_images,
-        None,
-        None,
-        None,
-        real_data,
-        discriminator_real_outputs,
-        discriminator_gen_outputs,
-        None,
-        None,
-        None)
+        generator_inputs, generated_images,
+        None, None, None,
+        real_data, discriminator_real_outputs, discriminator_gen_outputs,
+        None, None, None)
 
     losses = tfgan.gan_loss(gan_model,
                     generator_loss_fn=softplus_generator_loss,
@@ -185,7 +195,9 @@ class SnGAN(vanilla_gan.AbstractGAN):
 
     summary_g_image = tf.reshape(
         generated_images[0, :], [1] + common_layers.shape_list(real_data)[1:])
-    tf.summary.image("generated", summary_g_image, max_outputs=1)
+
+    tf.summary.image("generated", pack_images(generated_images, 4, 4), max_outputs=1)
+    tf.summary.image("real", pack_images(real_data, 4, 4), max_outputs=1)
 
     if is_training:  # Returns an dummy output and the losses dictionary.
       return tf.zeros_like(real_data), losses
