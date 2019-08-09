@@ -114,7 +114,7 @@ class Img2imgHSC(astroimage_utils.AstroImageProblem):
     redownload it from the server.
     """
     p = self.get_hparams()
-    if (not os.path.isfile(os.path.join(tmp_dir, 'catalog.fits')) and
+    if (not os.path.isfile(os.path.join(tmp_dir, 'catalog.fits')) or
         not os.path.isfile(os.path.join(tmp_dir, 'cutouts.hdf')) ):
       hsc_utils.build_hsc_sample(p.sql_file,
                                  out_dir=tmp_dir,
