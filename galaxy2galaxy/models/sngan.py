@@ -238,4 +238,6 @@ def gan_large():
   hparams.kernel_height = 4
   hparams.kernel_width = 4
   hparams.add_hparam("bottleneck_bits", 128)
+  hparams.add_hparam("discriminator_batchnorm", True)
+  hparams.add_hparam("num_sliced_vecs", 4096)
   return hparams
