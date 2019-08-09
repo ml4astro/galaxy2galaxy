@@ -7,3 +7,4 @@ import six
 
 from galaxy2galaxy.models import autoencoders
 from galaxy2galaxy.models import sngan
+from galaxy2galaxy.models import ganestimator

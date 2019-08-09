@@ -162,7 +162,7 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
       net = tf.layers.conv2d(net, 3, (3,3), padding='SAME', name='output_conv')
 
       out = tf.nn.sigmoid(net)
-      return common_layers.convert_real_to_rgb(out)
+      return out #common_layers.convert_real_to_rgb(out)
 
 @registry.register_model
 class SnGAN(SlicedGanLarge):
