@@ -82,7 +82,7 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
                              padding="SAME", name="d_conv1b")
       if hparams.discriminator_batchnorm:
         net = tf.layers.batch_normalization(net, training=is_training,
-                                            momentum=0.999, name="d_bn1")
+                                            momentum=0.999, name="c_bn1")
       # [bs, h/2, w/2, 64]
       net = lrelu(net)
       net = tf.layers.conv2d(net, 64, (3, 3), strides=(1, 1),
@@ -92,7 +92,7 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
                              padding="SAME", name="d_conv2b")
       if hparams.discriminator_batchnorm:
         net = tf.layers.batch_normalization(net, training=is_training,
-                                            momentum=0.999, name="d_bn2")
+                                            momentum=0.999, name="c_bn2")
       # [bs, h/4, w/4, 128]
       net = lrelu(net)
       net = tf.layers.conv2d(net, 128, (3, 3), strides=(1, 1),
@@ -102,7 +102,7 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
                              padding="SAME", name="d_conv3b")
       if hparams.discriminator_batchnorm:
         net = tf.layers.batch_normalization(net, training=is_training,
-                                            momentum=0.999, name="d_bn3")
+                                            momentum=0.999, name="c_bn3")
       # [bs, h/8, w/8, 256]
       net = lrelu(net)
       net = tf.layers.flatten(net)
