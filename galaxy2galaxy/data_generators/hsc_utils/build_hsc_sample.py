@@ -15,7 +15,7 @@ def build_hsc_sample(sql_file,
                      cutout_size=10.0, # in arcsec
                      data_release='pdr2',
                      rerun='pdr2_wide',
-                     nproc=4):
+                     nproc=2):
     """
     This function runs an sql query to extract a catalog, then
     proceeds to download cutouts in requested bands for all
