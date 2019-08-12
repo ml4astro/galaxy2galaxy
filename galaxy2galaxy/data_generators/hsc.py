@@ -73,7 +73,12 @@ class Img2imgHSC(astroimage_utils.AstroImageProblem):
         for row in catalog:
           cutout = cutouts[str(row['object_id'])]
           im = [cutout[f]['HDU0']['DATA'][:] for f in p.filters]
-          im = np.stack(im, axis=-1).astype('float32')
+          
+          try:
+              im = np.stack(im, axis=-1).astype('float32')
+          except:
+              print('Failure to stack bands', [i.shape for i in im])
+              continue
 
           # Images may not have exactly the right number of pixels
           im = _resize_image(im, p.img_len)
