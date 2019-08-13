@@ -10,7 +10,7 @@ from . import astroimage_utils
 from tensor2tensor.data_generators import generator_utils
 from tensor2tensor.data_generators import image_utils
 from tensor2tensor.data_generators import problem
-from tensor2tensor.layers import modalities
+from tensor2tensor.layers import modalities, common_layers
 from tensor2tensor.utils import metrics
 
 from galaxy2galaxy.utils import registry
@@ -219,6 +219,7 @@ class Img2imgHSCAnomalyLarge(Img2imgHSCAnomaly):
     if hasattr(p, 'attributes'):
       example["attributes"] = tf.stack([example[k] for k in p.attributes])
 
-    example["inputs"] = int_image
-    example["targets"] = int_image
+    image = common_layers.convert_rgb_to_symmetric_real(int_image)
+    example["inputs"] = image
+    example["targets"] = image
     return example
