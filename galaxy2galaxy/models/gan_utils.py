@@ -9,6 +9,8 @@ import tensorflow_gan as tfgan
 from tensorflow_gan.python.estimator.gan_estimator import Optimizers, get_gan_model, get_train_estimator_spec, get_eval_estimator_spec, get_predict_estimator_spec
 from tensorflow_gan.python import train as tfgan_train
 
+from tensor2tensor.utils import t2t_model
+
 from tensorflow_gan.examples.self_attention_estimator import ops
 from .commons import pack_images
 

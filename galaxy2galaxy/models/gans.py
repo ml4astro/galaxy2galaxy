@@ -7,7 +7,6 @@ import tensorflow as tf
 import tensorflow_gan as tfgan
 from tensorflow.python.summary import summary
 
-from tensor2tensor.utils import t2t_model
 from tensor2tensor.utils import hparams_lib
 from tensor2tensor.layers import common_layers
 from tensor2tensor.layers import common_hparams
