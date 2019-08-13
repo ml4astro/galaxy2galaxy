@@ -26,7 +26,7 @@ import h5py
 import os
 
 # HSC default pixel scale TODO: Check what's the correct scale
-_HSC_PIXEL_SCALE=0.2 #arcsec
+_HSC_PIXEL_SCALE=0.17501 #arcsec
 # Path to sql files for HSC samples
 _HSC_SAMPLE_SQL_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'hsc_utils')
 
@@ -138,7 +138,7 @@ class Img2imgHSCAnomaly(Img2imgHSC):
 
   def hparams(self, defaults, model_hparams):
     p = defaults
-    p.img_len = 96
+    p.img_len = 128
     p.filters = ['HSC-G', 'HSC-R', 'HSC-I']
     p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_anomaly.sql')
     p.data_release = 'pdr2'
