@@ -73,7 +73,7 @@ class Img2imgHSC(astroimage_utils.AstroImageProblem):
         for row in catalog:
           cutout = cutouts[str(row['object_id'])]
           im = [cutout[f]['HDU0']['DATA'][:] for f in p.filters]
-          
+
           try:
               im = np.stack(im, axis=-1).astype('float32')
           except:
@@ -161,6 +161,48 @@ class Img2imgHSCAnomaly(Img2imgHSC):
 
     int_image = tf.py_func(my_func, [image], tf.uint8)
     int_image.set_shape(image.shape)
+
+    if hasattr(p, 'attributes'):
+      example["attributes"] = tf.stack([example[k] for k in p.attributes])
+
+    example["inputs"] = int_image
+    example["targets"] = int_image
+    return example
+
+
+@registry.register_problem
+class Img2imgHSCAnomalySmall(Img2imgHSCAnomaly):
+  """ Dataset for anomaly detection on HSC data.
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.img_len = 32
+    p.filters = ['HSC-G', 'HSC-R', 'HSC-I']
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_anomaly.sql')
+    p.data_release = 'pdr2'
+    p.rerun = 'pdr2_wide'
+    p.attributes = ['g_cmodel_mag', 'r_cmodel_mag', 'i_cmodel_mag', 'z_cmodel_mag']
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Luptonize the examples, so that we can use t2t models easily
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    # Apply Luptonic Asinh stretch, and return uint8 rgb images
+    def my_func(x):
+      return make_lupton_rgb(x[...,2], x[...,1], x[...,0], Q=15, stretch=0.5, minimum=0)
+
+    int_image = tf.py_func(my_func, [image], tf.uint8)
+    int_image.set_shape(image.shape)
+    int_image = tf.image.resize_area(int_image, (p.img_len, p.img_len))
 
     if hasattr(p, 'attributes'):
       example["attributes"] = tf.stack([example[k] for k in p.attributes])
