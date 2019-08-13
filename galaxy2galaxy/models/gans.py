@@ -157,8 +157,8 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
 
 @registry.register_model
 class GanEstimator(SlicedGanLarge):
-    """ GAN based on tfgan estimator API
-    """
+  """ GAN based on tfgan estimator API
+  """
 
   def discriminator(self, x, is_training, reuse=False,
                     output_size=1):
