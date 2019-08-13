@@ -12,7 +12,7 @@ from tensor2tensor.layers import common_layers
 from tensor2tensor.layers import common_hparams
 
 from galaxy2galaxy.utils import registry
-from galaxy2galaxy.models.gan_utils import up_block, down_block, down_optimized_block
+from galaxy2galaxy.models.gan_utils import up_block, down_block, down_optimized_block, AbstractGAN
 
 class SelfAttentionGan(AbstractGAN):
   """ Implementation of Self Attention GAN
