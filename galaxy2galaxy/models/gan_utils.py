@@ -100,7 +100,7 @@ class AbstractGAN(t2t_model.T2TModel):
     else:  # tf.estimator.ModeKeys.PREDICT
       estimator_spec = get_predict_estimator_spec(gan_model)
 
-  return estimator_spec
+    return estimator_spec
 
 def usample(x):
   """Upsamples the input volume.
