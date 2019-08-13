@@ -5,8 +5,9 @@ from __future__ import print_function
 
 import tensorflow as tf
 import tensorflow.contrib.gan as tfgan
-from tensorflow.contrib.gan.python.estimator.python.gan_estimator_impl import _make_prediction_gan_model, _summary_type_map, _get_estimator_spec
+from tensorflow.contrib.gan.python.estimator.python.gan_estimator_impl import _make_prediction_gan_model, _summary_type_map, _get_estimator_spec, _get_train_estimator_spec
 from tensorflow.contrib.gan.python.losses.python.tuple_losses_impl import _args_to_gan_model
+from tensorflow.contrib.gan.python import train as tfgan_train
 from tensorflow.python.summary import summary
 from tensorflow.python.ops.losses import util
 from tensorflow.python.estimator import model_fn as model_fn_lib
@@ -25,6 +26,8 @@ from tensor2tensor.layers import common_hparams
 
 from galaxy2galaxy.utils import registry
 from galaxy2galaxy.models.gan_utils import softplus_discriminator_loss, softplus_generator_loss, SpectralNormConstraint
+from math import log
+
 
 def pack_images(images, rows, cols):
     """Helper utility to make a field of images."""
@@ -69,7 +72,7 @@ class WGAN(vanilla_gan.SlicedGan):
                                        padding='SAME', use_bias=False, name='conv%d'%i) # output_size 16x16
         net = tf.layers.batch_normalization(net, training=is_training,
                                             name="conv_bn%d"%i)
-        net = tf.nn.leaky_rely(net)
+        net = tf.nn.leaky_relu(net)
 
       net = tf.layers.conv2d_transpose(net, depth, 4, strides=2,
                                        padding='SAME', name='conv')
@@ -85,7 +88,7 @@ class WGAN(vanilla_gan.SlicedGan):
         "discriminator", reuse=reuse):
       batch_size, height, width = common_layers.shape_list(x)[:3]
 
-      for i in xrange(int(log(height, 2))):
+      for i in range(int(log(height, 2))):
         current_depth = depth * 2**i
         net = tf.layers.conv2d(x, current_depth, 4, strides=2,
                              padding="SAME", name="d_conv%d"%i)
@@ -184,16 +187,16 @@ class WGAN(vanilla_gan.SlicedGan):
       opt_disc = tf.train.AdamOptimizer(hparams.learning_rate)
 
       loss = tfgan.gan_loss(gan_model)
+      get_hooks_fn = tfgan_train.get_sequential_train_hooks()
 
     # Make the EstimatorSpec, which incorporates the GANModel, losses, eval
     # metrics, and optimizers (if required).
-    return _get_estimator_spec(
-      mode, gan_model, loss.generator_loss, loss.discriminator_loss,
-      None, opt_gen, opt_disc, None, True)
+    return _get_train_estimator_spec(
+      gan_model, loss, opt_gen, opt_disc, get_hooks_fn, is_chief=True)
 
 
 @registry.register_model
-class SpectralNormGan(SlicedGanLarge):
+class SpectralNormGan(WGAN):
   """ SN-GAN based on tfgan estimator API
   """
 
