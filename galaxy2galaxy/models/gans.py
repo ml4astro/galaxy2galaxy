@@ -153,7 +153,7 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
       # Final convolutionn to [96, 96, 3]
       net = tf.layers.conv2d(net, 3, (3,3), padding='SAME', name='output_conv')
 
-      out = tf.nn.sigmoid(net)
+      out = tf.nn.tanh(net)
       return out
 
 @registry.register_model
@@ -218,8 +218,6 @@ class GanEstimator(SlicedGanLarge):
       net = tf.layers.dense(net, output_size, name="d_fc3",
                              kernel_constraint=SpectralNormConstraint(update=do_update,
                                                                        name='sn4'))  # [bs, 1024]
-
-      net = lrelu(net)
       return net
 
   @classmethod
