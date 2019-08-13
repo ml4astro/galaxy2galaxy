@@ -203,7 +203,7 @@ class SpectralNormGan(SlicedGanLarge):
                     output_size=1):
     hparams = self.hparams
     depth = hparams.hidden_size
-	do_update = is_training and (not reuse)
+    do_update = is_training and (not reuse)
     with tf.variable_scope(
         "discriminator", reuse=reuse):
       batch_size, height, width = common_layers.shape_list(x)[:3]
