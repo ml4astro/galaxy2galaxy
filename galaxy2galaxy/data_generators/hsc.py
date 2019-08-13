@@ -200,6 +200,7 @@ class Img2imgHSCAnomalySmall(Img2imgHSCAnomaly):
     def my_func(x):
       return make_lupton_rgb(x[...,2], x[...,1], x[...,0], Q=15, stretch=0.5, minimum=0)
 
+    image = tf.layers.average_pooling2d(image, 2, padding='same')
     int_image = tf.py_func(my_func, [image], tf.uint8)
     int_image.set_shape(image.shape)
     int_image = tf.image.resize_area(tf.expand_dims(int_image,axis=0), (p.img_len, p.img_len))
