@@ -79,7 +79,7 @@ class WGAN(vanilla_gan.SlicedGan):
       out = tf.layers.conv2d(net, c_dim, 1, activation=tf.nn.tanh)
       return out
 
-  def discriminator(self, x, is_training, reuse=False,
+  def discriminator(self, x, unused_conditioning=None, is_training=False, reuse=False,
                     output_size=1):
     hparams = self.hparams
     depth = hparams.hidden_size
