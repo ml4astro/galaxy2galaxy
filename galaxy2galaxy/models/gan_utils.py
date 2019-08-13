@@ -5,109 +5,202 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-import tensorflow.contrib.gan as tfgan
-from tensorflow.contrib.gan.python.estimator.python.gan_estimator_impl import _make_prediction_gan_model, _summary_type_map, _get_estimator_spec
-from tensorflow.contrib.gan.python.losses.python.tuple_losses_impl import _args_to_gan_model
-from tensorflow.python.summary import summary
-from tensorflow.python.ops.losses import util
-from tensorflow.contrib.framework.python.ops import variables as variable_lib
-from tensorflow.python.framework import ops
-from tensorflow.python.ops import math_ops
-from tensorflow.python.ops.losses import losses
-from tensorflow.python.util import tf_inspect as inspect
+import tensorflow_gan as tfgan
+from tensorflow_gan.python.estimator.gan_estimator import Optimizers, get_gan_model, get_train_estimator_spec, get_eval_estimator_spec, get_predict_estimator_spec
+from tensorflow_gan.python import train as tfgan_train
 
-from tensor2tensor.layers.common_layers import apply_spectral_norm
+from tensorflow_gan.examples.self_attention_estimator import ops
+from .commons import pack_images
+
+class AbstractGAN(t2t_model.T2TModel):
+  """ Base class for tf-gan based models
+  """
+
+  def generator(self, code, mode, out_shape):
+    raise NotImplementedError
+
+  def discriminator(self, x, conditioning, mode):
+    raise NotImplementedError
+
+  def sample_noise(self):
+    raise NotImplementedError
+
+  def discriminator_loss_fn(self):
+    raise NotImplementedError
+
+  def generator_loss_fn(self):
+    raise NotImplementedError
+
+  @classmethod
+  def estimator_model_fn(cls,
+                         hparams,
+                         features,
+                         labels,
+                         mode,
+                         config=None,
+                         params=None,
+                         decode_hparams=None,
+                         use_tpu=False):
+
+    if mode not in [model_fn_lib.ModeKeys.TRAIN, model_fn_lib.ModeKeys.EVAL,
+                  model_fn_lib.ModeKeys.PREDICT]:
+      raise ValueError('Mode not recognized: %s' % mode)
+
+    if mode is model_fn_lib.ModeKeys.TRAIN:
+      is_training = True
+    else:
+      is_training = False
+
+    hparams = hparams_lib.copy_hparams(hparams)
+
+    # Instantiate model
+    data_parallelism = None
+    if not use_tpu and config:
+      data_parallelism = config.data_parallelism
+    reuse = tf.get_variable_scope().reuse
+
+    # Instantiate model
+    self = cls(
+        hparams,
+        mode,
+        data_parallelism=data_parallelism,
+        decode_hparams=decode_hparams,
+        _reuse=reuse)
+
+    real_data = features['inputs']        # rename inputs for clarity
+    generator_inputs = self.sample_noise()
+
+    optimizers = Optimizers(tf.compat.v1.train.AdamOptimizer(
+          hparams.generator_lr, hparams.beta1),
+          tf.compat.v1.train.AdamOptimizer(
+          hparams.discriminator_lr, hparams.beta1)
+          )
+
+    # Make GANModel, which encapsulates the GAN model architectures.
+    gan_model = get_gan_model(mode,
+                              self.generator,
+                              self.discriminator,
+                              real_data,
+                              generator_inputs, add_summaries=True)
+
+    # Make GANLoss, which encapsulates the losses.
+    if mode in [tf.estimator.ModeKeys.TRAIN, tf.estimator.ModeKeys.EVAL]:
+      gan_loss = tfgan_train.gan_loss(
+          gan_model,
+          self.generator_loss,
+          selg.discriminator_loss,
+          add_summaries=True)
+
+    # Make the EstimatorSpec, which incorporates the GANModel, losses, eval
+    # metrics, and optimizers (if required).
+    if mode == tf.estimator.ModeKeys.TRAIN:
+      estimator_spec = get_train_estimator_spec(gan_model, gan_loss, optimizers)
+    elif mode == tf.estimator.ModeKeys.EVAL:
+      estimator_spec = get_eval_estimator_spec(gan_model, gan_loss)
+    else:  # tf.estimator.ModeKeys.PREDICT
+      estimator_spec = get_predict_estimator_spec(gan_model)
+
+  return estimator_spec
+
+def usample(x):
+  """Upsamples the input volume.
+  Args:
+    x: The 4D input tensor.
+  Returns:
+    An upsampled version of the input tensor.
+  """
+  # Allow the batch dimension to be unknown at graph build time.
+  _, image_height, image_width, n_channels = x.shape.as_list()
+  # Add extra degenerate dimension after the dimensions corresponding to the
+  # rows and columns.
+  expanded_x = tf.expand_dims(tf.expand_dims(x, axis=2), axis=4)
+  # Duplicate data in the expanded dimensions.
+  after_tile = tf.tile(expanded_x, [1, 1, 2, 1, 2, 1])
+  return tf.reshape(after_tile,
+                    [-1, image_height * 2, image_width * 2, n_channels])
+
+def up_block(x, out_channels, name, training=True):
+  """Builds the residual blocks used in the generator.
+  Args:
+    x: The 4D input tensor.
+    out_channels: Integer number of features in the output layer.
+    name: The variable scope name for the block.
+    training: Whether this block is for training or not.
+  Returns:
+    A `Tensor` representing the output of the operation.
+  """
+  with tf.variable_scope(name):
+    bn0 = ops.BatchNorm(name='bn_0')
+    bn1 = ops.BatchNorm(name='bn_1')
+    x_0 = x
+    x = tf.nn.relu(bn0(x))
+    x = usample(x)
+    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, training, 'snconv1')
+    x = tf.nn.relu(bn1(x))
+    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, training, 'snconv2')
+
+    x_0 = usample(x_0)
+    x_0 = ops.snconv2d(x_0, out_channels, 1, 1, 1, 1, training, 'snconv3')
+
+    return x_0 + x
+
+def dsample(x):
+  """Downsamples the input volume by means of average pooling.
+  Args:
+    x: The 4D input tensor.
+  Returns:
+    An downsampled version of the input tensor.
+  """
+  xd = tf.nn.avg_pool(x, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
+  return xd
+
+def down_block(x, out_channels, name, downsample=True, act=tf.nn.relu):
+  """Builds the residual blocks used in the discriminator.
+  Args:
+    x: The 4D input vector.
+    out_channels: Number of features in the output layer.
+    name: The variable scope name for the block.
+    downsample: If True, downsample the spatial size the input tensor by
+                a factor of 2 on each side. If False, the spatial size of the
+                input tensor is unchanged.
+    act: The activation function used in the block.
+  Returns:
+    A `Tensor` representing the output of the operation.
+  """
+  with tf.variable_scope(name):
+    input_channels = x.shape.as_list()[-1]
+    x_0 = x
+    x = act(x)
+    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, name='sn_conv1')
+    x = act(x)
+    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, name='sn_conv2')
+    if downsample:
+      x = dsample(x)
+    if downsample or input_channels != out_channels:
+      x_0 = ops.snconv2d(x_0, out_channels, 1, 1, 1, 1, name='sn_conv3')
+      if downsample:
+        x_0 = dsample(x_0)
+    return x_0 + x
 
 
-class SpectralNormConstraint(tf.keras.constraints.Constraint):
-    """Constrains the weights to be normalized.
-    """
-    def __init__(self, update, name):
-        self.update = update
-        self.name = name
-
-    def __call__(self, w):
-        with tf.variable_scope(self.name):
-            w, assign_op = apply_spectral_norm(w)
-        if self.update:
-          with tf.control_dependencies([assign_op]):
-            w = w*1.0
-          # tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, assign_op)
-        return w
-
-def _softplus_generator_loss(
-    discriminator_gen_outputs,
-    weights=1.0,
-    scope=None,
-    loss_collection=ops.GraphKeys.LOSSES,
-    reduction=losses.Reduction.SUM_BY_NONZERO_WEIGHTS,
-    add_summaries=False):
-    """
-    Applies softplus
-    """
-    with ops.name_scope(scope, 'generator_softplus_loss',
-                        (discriminator_gen_outputs, weights)) as scope:
-        discriminator_gen_outputs = math_ops.to_float(discriminator_gen_outputs)
-
-        loss = tf.nn.softplus(- discriminator_gen_outputs)
-        loss = losses.compute_weighted_loss(
-            loss, weights, scope, loss_collection, reduction)
-
-        if add_summaries:
-            summary.scalar('generator_softplus_loss', loss)
-        return loss
-
-def _softplus_discriminator_loss(
-    discriminator_real_outputs,
-    discriminator_gen_outputs,
-    real_weights=1.0,
-    generated_weights=1.0,
-    scope=None,
-    loss_collection=ops.GraphKeys.LOSSES,
-    reduction=losses.Reduction.SUM_BY_NONZERO_WEIGHTS,
-    add_summaries=False):
-    """
-    Args:
-    discriminator_real_outputs: Discriminator output on real data.
-    discriminator_gen_outputs: Discriminator output on generated data. Expected
-      to be in the range of (-inf, inf).
-    real_weights: Optional `Tensor` whose rank is either 0, or the same rank as
-      `discriminator_real_outputs`, and must be broadcastable to
-      `discriminator_real_outputs` (i.e., all dimensions must be either `1`, or
-      the same as the corresponding dimension).
-    generated_weights: Same as `real_weights`, but for
-      `discriminator_gen_outputs`.
-    scope: The scope for the operations performed in computing the loss.
-    loss_collection: collection to which this loss will be added.
-    reduction: A `tf.losses.Reduction` to apply to loss.
-    add_summaries: Whether or not to add summaries for the loss.
-    Returns:
-    A loss Tensor. The shape depends on `reduction`.
-    """
-    with ops.name_scope(scope, 'discriminator_softplus_loss', (
-      discriminator_real_outputs, discriminator_gen_outputs, real_weights,
-      generated_weights)) as scope:
-        discriminator_real_outputs = tf.nn.softplus( - math_ops.to_float(discriminator_real_outputs))
-        discriminator_gen_outputs = tf.nn.softplus( math_ops.to_float(discriminator_gen_outputs))
-        discriminator_real_outputs.shape.assert_is_compatible_with(
-            discriminator_gen_outputs.shape)
-
-        loss_on_generated = losses.compute_weighted_loss(
-            discriminator_gen_outputs, generated_weights, scope,
-            loss_collection=None, reduction=reduction)
-        loss_on_real = losses.compute_weighted_loss(
-            discriminator_real_outputs, real_weights, scope, loss_collection=None,
-            reduction=reduction)
-        loss = loss_on_generated + loss_on_real
-        util.add_loss(loss, loss_collection)
-
-        if add_summaries:
-            summary.scalar('discriminator_gen_softplus_loss', loss_on_generated)
-            summary.scalar('discriminator_real_softplus_loss', loss_on_real)
-            summary.scalar('discriminator_softplus_loss', loss)
-        return loss
-
-softplus_generator_loss = _args_to_gan_model(
-    _softplus_generator_loss)
-softplus_discriminator_loss = _args_to_gan_model(
-    _softplus_discriminator_loss)
+def down_optimized_block(x, out_channels, name, act=tf.nn.relu):
+  """Builds optimized residual blocks for downsampling.
+  Compared with block, optimized_block always downsamples the spatial resolution
+  by a factor of 2 on each side.
+  Args:
+    x: The 4D input vector.
+    out_channels: Number of features in the output layer.
+    name: The variable scope name for the block.
+    act: The activation function used in the block.
+  Returns:
+    A `Tensor` representing the output of the operation.
+  """
+  with tf.variable_scope(name):
+    x_0 = x
+    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, name='sn_conv1')
+    x = act(x)
+    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, name='sn_conv2')
+    x = dsample(x)
+    x_0 = dsample(x_0)
+    x_0 = ops.snconv2d(x_0, out_channels, 1, 1, 1, 1, name='sn_conv3')
+    return x + x_0

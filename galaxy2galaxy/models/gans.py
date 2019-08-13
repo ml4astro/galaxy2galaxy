@@ -4,319 +4,94 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-import tensorflow.contrib.gan as tfgan
-from tensorflow.contrib.gan.python.estimator.python.gan_estimator_impl import _make_prediction_gan_model, _summary_type_map, _get_estimator_spec, _get_train_estimator_spec
-from tensorflow.contrib.gan.python.losses.python.tuple_losses_impl import _args_to_gan_model
-from tensorflow.contrib.gan.python import train as tfgan_train
+import tensorflow_gan as tfgan
 from tensorflow.python.summary import summary
-from tensorflow.python.ops.losses import util
-from tensorflow.python.estimator import model_fn as model_fn_lib
-from tensorflow.contrib.framework.python.ops import variables as variable_lib
-from tensorflow.python.framework import ops
-from tensorflow.python.ops import math_ops
-from tensorflow.python.ops.losses import losses
-from tensorflow.python.util import tf_inspect as inspect
 
 from tensor2tensor.utils import t2t_model
-from tensor2tensor.models import vanilla_gan
-from tensor2tensor.layers.common_layers import lrelu
 from tensor2tensor.utils import hparams_lib
 from tensor2tensor.layers import common_layers
 from tensor2tensor.layers import common_hparams
 
 from galaxy2galaxy.utils import registry
-from galaxy2galaxy.models.gan_utils import softplus_discriminator_loss, softplus_generator_loss, SpectralNormConstraint
-from math import log
+from galaxy2galaxy.models.gan_utils import up_block, down_block, down_optimized_block
 
-
-def pack_images(images, rows, cols):
-    """Helper utility to make a field of images."""
-    shape = tf.shape(images)
-    width = shape[-3]
-    height = shape[-2]
-    depth = shape[-1]
-    images = tf.reshape(images, (-1, width, height, depth))
-    batch = tf.shape(images)[0]
-    rows = tf.minimum(rows, batch)
-    cols = tf.minimum(batch // rows, cols)
-    images = images[:rows * cols]
-    images = tf.reshape(images, (rows, cols, width, height, depth))
-    images = tf.transpose(images, [0, 2, 1, 3, 4])
-    images = tf.reshape(images, [1, rows * width, cols * height, depth])
-    return images
-
-
-@registry.register_model
-class WGAN(vanilla_gan.SlicedGan):
-  """ WGAN-GP based on tfgan estimator API
+class SelfAttentionGan(AbstractGAN):
+  """ Implementation of Self Attention GAN
   """
 
-  def generator(self, z, is_training, out_shape):
-    hparams = self.hparams
-    height, width, c_dim = out_shape
-    depth = hparams.hidden_size
-    num_layers = int(log(height, 2)) - 1
-    base_shape = height // 2**(num_layers)
+  def sample_noise(self):
+    p = self.get_hparams()
+    shape = [p.batch_size, p.bottleneck_bits]
+    z = tf.random.normal(shape, name='z0', dtype=tf.float32)
+    return z
 
-    with tf.variable_scope("generator"):
-      current_depth = depth * 2 ** (num_layers - 1)
-      net = tf.layers.dense(z, base_shape*base_shape*current_depth, name="dense_1")
-      net = tf.layers.batch_normalization(net, training=is_training,
-                                          name="dense_bn1")
-      net = tf.nn.leaky_relu(net)
-      net = tf.reshape(net, [-1, base_shape, base_shape, current_depth])
+  def generator(self, code, mode, out_shape):
+    """Builds the generator segment of the graph, going from z -> G(z).
+    Args:
+    zs: Tensor representing the latent variables.
+    gf_dim: The gf dimension.
+    training: Whether in train mode or not. This affects things like batch
+      normalization and spectral normalization.
+    Returns:
+    - The output layer of the generator.
+    """
+    training = (mode == tf.estimator.ModeKeys.TRAIN)
+    p = self.get_hparams()
+    gf_dim = p.gf_dims
+    with tf.variable_scope('generator', reuse=tf.AUTO_REUSE) as gen_scope:
+      act0 = ops.snlinear(zs, gf_dim * 16 * 4 * 4, training=training, name='g_snh0')
+      act0 = tf.reshape(act0, [-1, 4, 4, gf_dim * 16])
 
-      for i in range(1, num_layers):
-        current_depth = depth * 2 ** (num_layers - i)
-        net = tf.layers.conv2d_transpose(net, current_depth, 4, strides=2,
-                                       padding='SAME', use_bias=False, name='conv%d'%i) # output_size 16x16
-        net = tf.layers.batch_normalization(net, training=is_training,
-                                            name="conv_bn%d"%i)
-        net = tf.nn.leaky_relu(net)
+      # pylint: disable=line-too-long
+      act1 = up_block(act0, target_class, gf_dim * 16, num_classes, 'g_block1', training)  # 8
+      act2 = up_block(act1, target_class, gf_dim * 8, num_classes, 'g_block2', training)  # 16
+      act3 = up_block(act2, target_class, gf_dim * 4, num_classes, 'g_block3', training)  # 32
+      act3 = ops.sn_non_local_block_sim(act3, training, name='g_ops')  # 32
+      act4 = up_block(act3, target_class, gf_dim * 2, num_classes, 'g_block4', training)  # 64
+      act5 = up_block(act4, target_class, gf_dim, num_classes, 'g_block5', training)  # 128
+      bn = ops.BatchNorm(name='g_bn')
 
-      net = tf.layers.conv2d_transpose(net, depth, 4, strides=2,
-                                       padding='SAME', name='conv')
-      out = tf.layers.conv2d(net, c_dim, 1, activation=tf.nn.tanh)
+      act5 = tf.nn.relu(bn(act5))
+      act6 = ops.snconv2d(act5, 3, 3, 3, 1, 1, training, 'g_snconv_last')
+      out = tf.nn.tanh(act6)
       return out
 
-  def discriminator(self, x, unused_conditioning=None, is_training=False, reuse=False,
-                    output_size=1):
-    hparams = self.hparams
-    depth = hparams.hidden_size
+  def discriminator(image, conditioning, df_dim):
+    """Builds the discriminator graph.
+    Args:
+        image: The current batch of images to classify as fake or real.
+        df_dim: The df dimension.
+        act: The activation function used in the discriminator.
+      Returns:
+        - A `Tensor` representing the logits of the discriminator.
+        - A list containing all trainable varaibles defined by the model.
+    """
+    p = self.get_hparams()
+    df_dim = p.df_dims
+    training = (mode == tf.estimator.ModeKeys.TRAIN)
+    act=tf.nn.relu
+    with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE) as dis_scope:
+      h0 = down_optimized_block(image, df_dim, 'd_optimized_block1', act=act)  # 64 * 64
+      h1 = down_block(h0, df_dim * 2, 'd_block2', act=act)  # 32 * 32
+      h1 = ops.sn_non_local_block_sim(h1, name='d_ops')  # 32 * 32
+      h2 = down_block(h1, df_dim * 4, 'd_block3', act=act)  # 16 * 16
+      h3 = down_block(h2, df_dim * 8, 'd_block4', act=act)  # 8 * 8
+      h4 = down_block(h3, df_dim * 16, 'd_block5', act=act)  # 4 * 4
+      h5 = down_block(h4, df_dim * 16, 'd_block6', downsample=False, act=act)
+      h5_act = act(h5)
+      h6 = tf.reduce_sum(h5_act, [1, 2])
+      output = ops.snlinear(h6, 1, name='d_sn_linear')
+    return output
 
-    with tf.variable_scope(
-        "discriminator", reuse=reuse):
-      batch_size, height, width = common_layers.shape_list(x)[:3]
+  def generator_loss(self,*args, **kwargs):
+    return tfgan.losses.wasserstein_hinge_generator_loss(*args, **kwargs)
 
-      for i in range(int(log(height, 2))):
-        current_depth = depth * 2**i
-        net = tf.layers.conv2d(x, current_depth, 4, strides=2,
-                             padding="SAME", name="d_conv%d"%i)
-        net = tf.nn.leaky_relu(net)
-        if hparams.discriminator_batchnorm:
-          net = tf.layers.batch_normalization(net, training=is_training,
-                                              name="c_bn%d"%i)
-      net = tf.layers.flatten(net)
-      net = tf.layers.dense(net, output_size, name="d_fcn", activation=None)  # [bs, 1024]
-      return net
-
-  @classmethod
-  def estimator_model_fn(cls,
-                         hparams,
-                         features,
-                         labels,
-                         mode,
-                         config=None,
-                         params=None,
-                         decode_hparams=None,
-                         use_tpu=False):
-
-    if mode not in [model_fn_lib.ModeKeys.TRAIN, model_fn_lib.ModeKeys.EVAL,
-                  model_fn_lib.ModeKeys.PREDICT]:
-      raise ValueError('Mode not recognized: %s' % mode)
-
-    if mode is model_fn_lib.ModeKeys.TRAIN:
-      is_training = True
-    else:
-      is_training = False
-
-    hparams = hparams_lib.copy_hparams(hparams)
-
-    # Instantiate model
-    data_parallelism = None
-    if not use_tpu and config:
-      data_parallelism = config.data_parallelism
-    reuse = tf.get_variable_scope().reuse
-
-    # Instantiate model
-    self = cls(
-        hparams,
-        mode,
-        data_parallelism=data_parallelism,
-        decode_hparams=decode_hparams,
-        _reuse=reuse)
-
-    real_data = common_layers.convert_rgb_to_symmetric_real(features['inputs'])  # rename inputs for clarity
-    generator_inputs = tf.random_uniform([self.hparams.batch_size,
-                                          self.hparams.bottleneck_bits],
-                                          minval=-1, maxval=1, name="z")
-
-    # rename inputs for clarity
-    out_shape = common_layers.shape_list(real_data)[1:4]
-
-    if mode == model_fn_lib.ModeKeys.PREDICT:
-      if real_data is not None:
-        raise ValueError('`labels` must be `None` when mode is `predict`. '
-                           'Instead, found %s' % real_data)
-      gan_model = _make_prediction_gan_model(generator_inputs,
-                                                   partial(self.generator, is_training=is_training, out_shape=out_shape),
-                                                   'Generator')
-    # Here should be where we export the model as tf hub
-
-    else:  # model_fn_lib.ModeKeys.TRAIN or model_fn_lib.ModeKeys.EVAL
-           # Manual gan_model creation
-      with tf.variable_scope('Generator') as gen_scope:
-        generated_images = self.generator(generator_inputs, is_training=is_training, out_shape=out_shape)
-
-      with tf.variable_scope('Discriminator') as dis_scope:
-        discriminator_gen_outputs = self.discriminator(generated_images, is_training=is_training, output_size=1)
-
-      with tf.variable_scope(dis_scope, reuse=True):
-        discriminator_real_outputs = self.discriminator(real_data, is_training=is_training, output_size=1)
-
-      tf.summary.image("generated", pack_images(generated_images, 4, 4), max_outputs=1)
-      tf.summary.image("real", pack_images(real_data, 4, 4), max_outputs=1)
-
-      generator_variables = variable_lib.get_trainable_variables(gen_scope)
-      discriminator_variables = variable_lib.get_trainable_variables(dis_scope)
-
-      gan_model = tfgan.GANModel(
-                generator_inputs,
-                generated_images,
-                generator_variables,
-                gen_scope,
-                self.generator,
-                real_data,
-                discriminator_real_outputs,
-                discriminator_gen_outputs,
-                discriminator_variables,
-                dis_scope,
-                self.discriminator)
-
-      opt_gen = tf.train.AdamOptimizer(hparams.learning_rate*2, 0.5)
-      opt_disc = tf.train.AdamOptimizer(hparams.learning_rate, 0.5)
-
-      loss = tfgan.gan_loss(gan_model,gradient_penalty_weight=1.)
-      get_hooks_fn = tfgan_train.get_sequential_train_hooks()
-
-    # Make the EstimatorSpec, which incorporates the GANModel, losses, eval
-    # metrics, and optimizers (if required).
-    return _get_train_estimator_spec(
-      gan_model, loss, opt_gen, opt_disc, get_hooks_fn, is_chief=True)
-
-
-@registry.register_model
-class SpectralNormGan(WGAN):
-  """ SN-GAN based on tfgan estimator API
-  """
-
-  def discriminator(self, x, is_training, reuse=False,
-                    output_size=1):
-    hparams = self.hparams
-    depth = hparams.hidden_size
-    do_update = is_training and (not reuse)
-    with tf.variable_scope(
-        "discriminator", reuse=reuse):
-      batch_size, height, width = common_layers.shape_list(x)[:3]
-
-      for i in xrange(int(log(height, 2))):
-        current_depth = depth * 2**i
-        net = tf.layers.conv2d(x, current_depth, 4, strides=2,
-                             padding="SAME", name="d_conv%d"%i,
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='sn%d'%i))
-        net = tf.nn.leaky_relu(net)
-      net = tf.layers.flatten(net)
-      net = tf.layers.dense(net, output_size, name="d_fcn", activation=None,
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='fn_final'))
-      return net
-
-  @classmethod
-  def estimator_model_fn(cls,
-                         hparams,
-                         features,
-                         labels,
-                         mode,
-                         config=None,
-                         params=None,
-                         decode_hparams=None,
-                         use_tpu=False):
-
-    if mode not in [model_fn_lib.ModeKeys.TRAIN, model_fn_lib.ModeKeys.EVAL,
-                  model_fn_lib.ModeKeys.PREDICT]:
-      raise ValueError('Mode not recognized: %s' % mode)
-
-    if mode is model_fn_lib.ModeKeys.TRAIN:
-      is_training = True
-    else:
-      is_training = False
-
-    hparams = hparams_lib.copy_hparams(hparams)
-
-    # Instantiate model
-    data_parallelism = None
-    if not use_tpu and config:
-      data_parallelism = config.data_parallelism
-    reuse = tf.get_variable_scope().reuse
-
-    # Instantiate model
-    self = cls(
-        hparams,
-        mode,
-        data_parallelism=data_parallelism,
-        decode_hparams=decode_hparams,
-        _reuse=reuse)
-
-    real_data = common_layers.convert_rgb_to_real(features['inputs'])  # rename inputs for clarity
-    generator_inputs = tf.random_uniform([self.hparams.batch_size,
-                                          self.hparams.bottleneck_bits],
-                                          minval=-1, maxval=1, name="z")
-
-    # rename inputs for clarity
-    out_shape = common_layers.shape_list(real_data)[1:4]
-
-    if mode == model_fn_lib.ModeKeys.PREDICT:
-      if real_data is not None:
-        raise ValueError('`labels` must be `None` when mode is `predict`. '
-                           'Instead, found %s' % real_data)
-      gan_model = _make_prediction_gan_model(generator_inputs,
-                                                   partial(self.generator, is_training=is_training, out_shape=out_shape),
-                                                   'Generator')
-    # Here should be where we export the model as tf hub
-
-    else:  # model_fn_lib.ModeKeys.TRAIN or model_fn_lib.ModeKeys.EVAL
-            # Manual gan_model creation
-      with tf.variable_scope('Generator') as gen_scope:
-        generated_images = self.generator(generator_inputs, is_training=is_training, out_shape=out_shape)
-
-      with tf.variable_scope('Discriminator') as dis_scope:
-        discriminator_gen_outputs = self.discriminator(generated_images, is_training=is_training)
-
-      with tf.variable_scope(dis_scope, reuse=True):
-        discriminator_real_outputs = self.discriminator(real_data, is_training=is_training, reuse=True)
-
-      tf.summary.image("generated", pack_images(generated_images, 4, 4), max_outputs=1)
-      tf.summary.image("real", pack_images(real_data, 4, 4), max_outputs=1)
-
-      generator_variables = variable_lib.get_trainable_variables(gen_scope)
-      discriminator_variables = variable_lib.get_trainable_variables(dis_scope)
-
-      gan_model = tfgan.GANModel(
-                generator_inputs,
-                generated_images,
-                generator_variables,
-                gen_scope,
-                self.generator,
-                real_data,
-                discriminator_real_outputs,
-                discriminator_gen_outputs,
-                discriminator_variables,
-                dis_scope,
-                self.discriminator)
-
-      opt_gen = tf.train.AdamOptimizer(hparams.learning_rate)
-      opt_disc = tf.train.AdamOptimizer(hparams.learning_rate)
-
-    # Make the EstimatorSpec, which incorporates the GANModel, losses, eval
-    # metrics, and optimizers (if required).
-    return _get_estimator_spec(
-      mode, gan_model, softplus_generator_loss, softplus_discriminator_loss,
-      None, opt_gen, opt_disc, None, True)
+  def discriminator_loss(selg, *args, **kwargs):
+    return tfgan.losses.wasserstein_hinge_discriminator_loss(*args, **kwargs)
 
 @registry.register_hparams
-def gan_large():
-  """Basic parameters for large gan."""
+def sagan():
+  """Basic parameters for 128x128 SAGAN."""
   hparams = common_hparams.basic_params1()
   hparams.optimizer = "adam"
   hparams.learning_rate = 0.0001
@@ -332,5 +107,9 @@ def gan_large():
   hparams.kernel_height = 4
   hparams.kernel_width = 4
   hparams.add_hparam("bottleneck_bits", 128)
-  hparams.add_hparam("discriminator_batchnorm", True)
+  hparams.add_hparam("df_dims", 32)
+  hparams.add_hparam("gf_dims", 32)
+  hparams.add_hparam("generator_lr", 0.0001)
+  hparams.add_hparam("discriminator_lr", 0.0004)
+  hparams.add_hparam("beta1", 0.5)
   return hparams

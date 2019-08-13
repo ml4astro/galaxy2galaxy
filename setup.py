@@ -22,6 +22,7 @@ setup(
         'tensor2tensor',
         'tensorflow-datasets',
         'tensorflow-probability',
+        'tensorflow-gan',
         'fits2hdf',
         'unagi'
     ],
