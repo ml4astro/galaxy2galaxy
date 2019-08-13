@@ -8,6 +8,7 @@ import tensorflow as tf
 import tensorflow_gan as tfgan
 from tensorflow_gan.python.estimator.gan_estimator import Optimizers, get_gan_model, get_train_estimator_spec, get_eval_estimator_spec, get_predict_estimator_spec
 from tensorflow_gan.python import train as tfgan_train
+from tensorflow.python.estimator import model_fn as model_fn_lib
 
 from tensor2tensor.utils import t2t_model
 
