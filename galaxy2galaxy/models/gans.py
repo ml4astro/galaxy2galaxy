@@ -183,8 +183,8 @@ class WGAN(vanilla_gan.SlicedGan):
                 dis_scope,
                 self.discriminator)
 
-      opt_gen = tf.train.AdamOptimizer(hparams.learning_rate)
-      opt_disc = tf.train.AdamOptimizer(hparams.learning_rate)
+      opt_gen = tf.train.AdamOptimizer(hparams.learning_rate*2, 0.5)
+      opt_disc = tf.train.AdamOptimizer(hparams.learning_rate, 0.5)
 
       loss = tfgan.gan_loss(gan_model,gradient_penalty_weight=1.)
       get_hooks_fn = tfgan_train.get_sequential_train_hooks()
