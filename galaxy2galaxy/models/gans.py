@@ -14,6 +14,8 @@ from tensor2tensor.layers import common_hparams
 from galaxy2galaxy.utils import registry
 from galaxy2galaxy.models.gan_utils import up_block, down_block, down_optimized_block, AbstractGAN
 
+from tensorflow_gan.examples.self_attention_estimator import ops
+
 @registry.register_model
 class SelfAttentionGan(AbstractGAN):
   """ Implementation of Self Attention GAN
