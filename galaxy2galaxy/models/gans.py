@@ -21,6 +21,7 @@ from tensor2tensor.models import vanilla_gan
 from tensor2tensor.layers.common_layers import lrelu
 from tensor2tensor.utils import hparams_lib
 from tensor2tensor.layers import common_layers
+from tensor2tensor.layers import common_hparams
 
 from galaxy2galaxy.utils import registry
 from galaxy2galaxy.models.gan_utils import softplus_discriminator_loss, softplus_generator_loss, SpectralNormConstraint
