@@ -20,7 +20,7 @@ class SelfAttentionGan(AbstractGAN):
   """
 
   def sample_noise(self):
-    p = self.get_hparams()
+    p = self.hparams
     shape = [p.batch_size, p.bottleneck_bits]
     z = tf.random.normal(shape, name='z0', dtype=tf.float32)
     return z
@@ -36,7 +36,7 @@ class SelfAttentionGan(AbstractGAN):
     - The output layer of the generator.
     """
     training = (mode == tf.estimator.ModeKeys.TRAIN)
-    p = self.get_hparams()
+    p = self.hparams
     gf_dim = p.gf_dims
     with tf.variable_scope('generator', reuse=tf.AUTO_REUSE) as gen_scope:
       act0 = ops.snlinear(zs, gf_dim * 16 * 4 * 4, training=training, name='g_snh0')
@@ -66,7 +66,7 @@ class SelfAttentionGan(AbstractGAN):
         - A `Tensor` representing the logits of the discriminator.
         - A list containing all trainable varaibles defined by the model.
     """
-    p = self.get_hparams()
+    p = self.hparams
     df_dim = p.df_dims
     training = (mode == tf.estimator.ModeKeys.TRAIN)
     act=tf.nn.relu
