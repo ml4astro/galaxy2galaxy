@@ -154,7 +154,7 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
       # Final convolutionn to [96, 96, 3]
       net = tf.layers.conv2d(net, 3, (3,3), padding='SAME', name='output_conv')
 
-      out = tf.nn.sigmoid(net)
+      out = tf.nn.softplus(net)
       return out
 
 @registry.register_model
@@ -258,7 +258,7 @@ class GanEstimator(SlicedGanLarge):
         decode_hparams=decode_hparams,
         _reuse=reuse)
 
-    real_data =  common_layers.convert_rgb_to_real(features['inputs'])  # rename inputs for clarity
+    real_data = common_layers.convert_rgb_to_real(features['inputs'])  # rename inputs for clarity
     generator_inputs = tf.random_uniform([self.hparams.batch_size,
                                           self.hparams.bottleneck_bits],
                                           minval=-1, maxval=1, name="z")
