@@ -175,21 +175,6 @@ class Img2imgHSCAnomalySmall(Img2imgHSCAnomaly):
   """ Dataset for anomaly detection on HSC data.
   """
 
-  def hparams(self, defaults, model_hparams):
-    p = defaults
-    p.img_len = 32
-    p.filters = ['HSC-G', 'HSC-R', 'HSC-I']
-    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_anomaly.sql')
-    p.data_release = 'pdr2'
-    p.rerun = 'pdr2_wide'
-    p.attributes = ['g_cmodel_mag', 'r_cmodel_mag', 'i_cmodel_mag', 'z_cmodel_mag']
-    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
-                  "attributes":  modalities.ModalityType.IDENTITY,
-                  "targets": modalities.ModalityType.IDENTITY}
-    p.vocab_size = {"inputs": None,
-                    "attributes": None,
-                    "targets": None}
-
   def preprocess_example(self, example, unused_mode, unused_hparams):
     """ Luptonize the examples, so that we can use t2t models easily
     """
@@ -203,7 +188,7 @@ class Img2imgHSCAnomalySmall(Img2imgHSCAnomaly):
     image = tf.layers.average_pooling2d(image, 2, padding='same')
     int_image = tf.py_func(my_func, [image], tf.uint8)
     int_image.set_shape(image.shape)
-    int_image = tf.image.resize_area(tf.expand_dims(int_image,axis=0), (p.img_len, p.img_len))
+    int_image = tf.image.resize_area(tf.expand_dims(int_image,axis=0), (p.img_len//3, p.img_len//3))
     int_image = int_image[0]
 
     if hasattr(p, 'attributes'):
