@@ -20,7 +20,7 @@ class AbstractGAN(t2t_model.T2TModel):
   """ Base class for tf-gan based models
   """
 
-  def generator(self, code, mode, out_shape):
+  def generator(self, code, mode):
     raise NotImplementedError
 
   def discriminator(self, x, conditioning, mode):

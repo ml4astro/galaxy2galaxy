@@ -25,7 +25,7 @@ class SelfAttentionGan(AbstractGAN):
     z = tf.random.normal(shape, name='z0', dtype=tf.float32)
     return z
 
-  def generator(self, code, mode, out_shape):
+  def generator(self, code, mode):
     """Builds the generator segment of the graph, going from z -> G(z).
     Args:
     zs: Tensor representing the latent variables.
