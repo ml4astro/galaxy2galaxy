@@ -202,7 +202,8 @@ class Img2imgHSCAnomalySmall(Img2imgHSCAnomaly):
 
     int_image = tf.py_func(my_func, [image], tf.uint8)
     int_image.set_shape(image.shape)
-    int_image = tf.image.resize_area(int_image, (p.img_len, p.img_len))
+    int_image = tf.image.resize_area(tf.expand_dims(int_image,axis=0), (p.img_len, p.img_len))
+    int_image = int_image[0]
 
     if hasattr(p, 'attributes'):
       example["attributes"] = tf.stack([example[k] for k in p.attributes])
