@@ -95,7 +95,7 @@ class SelfAttentionGan(AbstractGAN):
 
   @property
   def summaries(self):
-    return [SummaryType.IMAGES, SummaryType.IMAGE_COMPARISON]
+    return [SummaryType.IMAGES]
 
 @registry.register_hparams
 def sagan():
