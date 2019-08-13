@@ -13,8 +13,10 @@ from tensor2tensor.layers import common_hparams
 
 from galaxy2galaxy.utils import registry
 from galaxy2galaxy.models.gan_utils import up_block, down_block, down_optimized_block, AbstractGAN
+from galaxy2galaxy.models.gan_utils import SummaryType
 
 from tensorflow_gan.examples.self_attention_estimator import ops
+
 
 @registry.register_model
 class SelfAttentionGan(AbstractGAN):
@@ -90,6 +92,10 @@ class SelfAttentionGan(AbstractGAN):
 
   def discriminator_loss(selg, *args, **kwargs):
     return tfgan.losses.wasserstein_hinge_discriminator_loss(*args, **kwargs)
+
+  @property
+  def summaries(self):
+    return [SummaryType.IMAGES, SummaryType.IMAGE_COMPARISON]
 
 @registry.register_hparams
 def sagan():

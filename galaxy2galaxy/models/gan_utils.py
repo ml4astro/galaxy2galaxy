@@ -14,7 +14,7 @@ from tensor2tensor.utils import hparams_lib
 from tensor2tensor.utils import t2t_model
 
 from tensorflow_gan.examples.self_attention_estimator import ops
-from .commons import pack_images
+from tensorflow_gan.python.estimator.gan_estimator import SummaryType
 
 class AbstractGAN(t2t_model.T2TModel):
   """ Base class for tf-gan based models
@@ -34,6 +34,10 @@ class AbstractGAN(t2t_model.T2TModel):
 
   def generator_loss_fn(self):
     raise NotImplementedError
+
+  @property
+  def summaries(self):
+    return None
 
   @classmethod
   def estimator_model_fn(cls,
@@ -85,7 +89,8 @@ class AbstractGAN(t2t_model.T2TModel):
                               self.generator,
                               self.discriminator,
                               real_data,
-                              generator_inputs, add_summaries=True)
+                              generator_inputs,
+                              add_summaries=self.summaries)
 
     # Make GANLoss, which encapsulates the losses.
     if mode in [tf.estimator.ModeKeys.TRAIN, tf.estimator.ModeKeys.EVAL]:
