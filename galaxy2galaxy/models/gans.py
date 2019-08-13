@@ -186,7 +186,7 @@ class WGAN(vanilla_gan.SlicedGan):
       opt_gen = tf.train.AdamOptimizer(hparams.learning_rate)
       opt_disc = tf.train.AdamOptimizer(hparams.learning_rate)
 
-      loss = tfgan.gan_loss(gan_model)
+      loss = tfgan.gan_loss(gan_model,gradient_penalty_weight=1.)
       get_hooks_fn = tfgan_train.get_sequential_train_hooks()
 
     # Make the EstimatorSpec, which incorporates the GANModel, losses, eval
