@@ -26,6 +26,7 @@ from tensor2tensor.layers import common_hparams
 from galaxy2galaxy.utils import registry
 from galaxy2galaxy.models.gan_utils import softplus_discriminator_loss, softplus_generator_loss, SpectralNormConstraint
 
+from galaxy2galaxy.models.gan_utils import generator, discriminator
 
 def pack_images(images, rows, cols):
     """Helper utility to make a field of images."""
@@ -43,182 +44,59 @@ def pack_images(images, rows, cols):
     images = tf.reshape(images, [1, rows * width, cols * height, depth])
     return images
 
+
 @registry.register_model
-class SlicedGanLarge(vanilla_gan.SlicedGan):
-  """ Customized sliced gan for larger images
+class WGAN(vanilla_gan.SlicedGan):
+  """ WGAN-GP based on tfgan estimator API
   """
-
-  def discriminator(self, x, is_training, reuse=False,
-                    output_size=1024):
-    """Discriminator architecture with Spectral Normalization.
-
-    Args:
-      x: input images, shape [bs, h, w, channels]
-      is_training: boolean, are we in train or eval model.
-      reuse: boolean, should params be re-used.
-
-    Returns:
-      out_logit: the output logits (before sigmoid).
-    """
-    hparams = self.hparams
-    with tf.variable_scope(
-        "discriminator", reuse=reuse,
-        initializer=tf.random_normal_initializer(stddev=0.02)):
-      batch_size, height, width = common_layers.shape_list(x)[:3]
-
-      # Mapping x from [bs, h, w, c] to [bs, 1]
-      net = tf.layers.conv2d(x, 32, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv1")
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 64, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv1b")
-      if hparams.discriminator_batchnorm:
-        net = tf.layers.batch_normalization(net, training=is_training,
-                                            momentum=0.999, name="c_bn1")
-      # [bs, h/2, w/2, 64]
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 64, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv2")
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 128, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv2b")
-      if hparams.discriminator_batchnorm:
-        net = tf.layers.batch_normalization(net, training=is_training,
-                                            momentum=0.999, name="c_bn2")
-      # [bs, h/4, w/4, 128]
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 128, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv3")
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 256, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv3b")
-      if hparams.discriminator_batchnorm:
-        net = tf.layers.batch_normalization(net, training=is_training,
-                                            momentum=0.999, name="c_bn3")
-      # [bs, h/8, w/8, 256]
-      net = lrelu(net)
-      net = tf.layers.flatten(net)
-      net = tf.layers.dense(net, output_size, name="d_fc3")  # [bs, 1024]
-      if hparams.discriminator_batchnorm:
-        net = tf.layers.batch_normalization(net, training=is_training,
-                                            momentum=0.999, name="d_bn3")
-      net = lrelu(net)
-      return net
 
   def generator(self, z, is_training, out_shape):
-    """Generator outputting image in [0, 1]."""
     hparams = self.hparams
     height, width, c_dim = out_shape
-    batch_size = hparams.batch_size
-    with tf.variable_scope("generator",
-        initializer=tf.random_normal_initializer(stddev=0.02)):
-      net = tf.layers.dense(z, 1024, name="g_fc1")
-      net = tf.layers.batch_normalization(net, training=is_training,
-                                          momentum=0.999, name="g_bn1")
-      net = lrelu(net)
-      net = tf.layers.dense(net, 128 * (height // 16) * (width // 16),
-                            name="g_fc2")
-      net = tf.layers.batch_normalization(net, training=is_training,
-                                          momentum=0.999, name="g_bn2")
-      net = lrelu(net)
-      net = tf.reshape(net, [batch_size, height // 16, width // 16, 128])
-      # Size [6, 6, 128]
+    depth = hparams.hidden_size
+	num_layers = int(log(height, 2)) - 1
+	base_shape = height // 2**(num_layers)
 
-      net = tf.layers.conv2d_transpose(net, 256, 4, strides=2,
-                                       padding='SAME', use_bias=False, name='conv1') # output_size 16x16
-      net = tf.layers.batch_normalization(net, training=is_training,
-                                          momentum=0.999, name="conv_bn1")
-      net = lrelu(net)
+    with tf.variable_scope("generator"):
+	  current_depth = depth * 2 ** (num_layers - 1)
+      net = tf.layers.dense(z, base_shape*base_shape*current_depth, name="dense_1")
+	  net = tf.layers.batch_normalization(net, training=is_training,
+                                          name="dense_bn1")
+	  net = tf.nn.leaky_relu(net)
+      net = tf.reshape(net, [-1, base_shape, base_shape, current_depth])
 
-      # Size [12, 12, 128]
-      net = tf.layers.conv2d_transpose(net, 128, 4, strides=2,
-                                       padding='SAME', use_bias=False, name='conv2') # output_size 16x16
-      net = tf.layers.batch_normalization(net, training=is_training,
-                                          momentum=0.999, name="conv_bn2")
-      net = lrelu(net)
+	  for i in range(1, num_layers):
+		current_depth = depth * 2 ** (num_layers - i)
+	    net = tf.layers.conv2d_transpose(net, current_depth, 4, strides=2,
+                                       padding='SAME', use_bias=False, name='conv%d'%i) # output_size 16x16
+        net = tf.layers.batch_normalization(net, training=is_training,
+                                            name="conv_bn%d"%i)
+      	net = tf.nn.leaky_rely(net)
 
-      # Size [24, 24, 128]
-      net = tf.layers.conv2d_transpose(net, 64, 4, strides=2,
-                                       padding='SAME', use_bias=False, name='conv3') # output_size 16x16
-      net = tf.layers.batch_normalization(net, training=is_training,
-                                          momentum=0.999, name="conv_bn3")
-      net = lrelu(net)
-
-      # Size [48, 48, 128]
-      net = tf.layers.conv2d_transpose(net, 32, 4, strides=2,
-                                       padding='SAME', use_bias=False, name='conv4') # output_size 16x16
-      net = tf.layers.batch_normalization(net, training=is_training,
-                                          momentum=0.999, name="conv_bn4")
-      net = lrelu(net)
-
-      # Final convolutionn to [96, 96, 3]
-      net = tf.layers.conv2d(net, 3, (3,3), padding='SAME', name='output_conv')
-
-      out = tf.nn.softplus(net)
-      return out
-
-@registry.register_model
-class GanEstimator(SlicedGanLarge):
-  """ GAN based on tfgan estimator API
-  """
+      net = tf.layers.conv2d_transpose(net, depth, 4, strides=2,
+                                       padding='SAME', name='conv')
+      out = tf.layers.conv2d(net, c_dim, 1, activation=tf.nn.tanh)
+	  return out
 
   def discriminator(self, x, is_training, reuse=False,
                     output_size=1):
-    """Discriminator architecture with Spectral Normalization.
-
-    Args:
-      x: input images, shape [bs, h, w, channels]
-      is_training: boolean, are we in train or eval model.
-      reuse: boolean, should params be re-used.
-
-    Returns:
-      out_logit: the output logits (before sigmoid).
-    """
     hparams = self.hparams
-    with tf.variable_scope(
-        "discriminator", reuse=reuse,
-        initializer=tf.random_normal_initializer(stddev=0.02)):
-      batch_size, height, width = common_layers.shape_list(x)[:3]
-      do_update = is_training and (not reuse)
+    depth = hparams.hidden_size
 
-      # Mapping x from [bs, h, w, c] to [bs, 1]
-      net = tf.layers.conv2d(x, 32, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv1",
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='sn1'))
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 64, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv1b",
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='sn1b'))
-      # [bs, h/2, w/2, 64]
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 64, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv2",
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='sn2'))
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 128, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv2b",
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='sn2b'))
-      # [bs, h/4, w/4, 128]
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 128, (3, 3), strides=(1, 1),
-                             padding="SAME", name="d_conv3",
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='sn3'))
-      net = lrelu(net)
-      net = tf.layers.conv2d(net, 256, (4, 4), strides=(2, 2),
-                             padding="SAME", name="d_conv3b",
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='sn3b'))
-      # [bs, h/8, w/8, 256]
-      net = lrelu(net)
+    with tf.variable_scope(
+        "discriminator", reuse=reuse):
+      batch_size, height, width = common_layers.shape_list(x)[:3]
+
+      for i in xrange(int(log(height, 2))):
+        current_depth = depth * 2**i
+        net = tf.layers.conv2d(x, current_depth, 4, strides=2,
+                             padding="SAME", name="d_conv%d"%i)
+        net = tf.nn.leaky_relu(net)
+        if hparams.discriminator_batchnorm:
+          net = tf.layers.batch_normalization(net, training=is_training,
+                                              name="c_bn%d"%i)
       net = tf.layers.flatten(net)
-      net = tf.layers.dense(net, output_size, name="d_fc3",
-                             kernel_constraint=SpectralNormConstraint(update=do_update,
-                                                                       name='sn4'))  # [bs, 1024]
+      net = tf.layers.dense(net, output_size, name="d_fcn", activation=None)  # [bs, 1024]
       return net
 
   @classmethod
@@ -243,6 +121,127 @@ class GanEstimator(SlicedGanLarge):
 
     hparams = hparams_lib.copy_hparams(hparams)
 
+    # Instantiate model
+    data_parallelism = None
+    if not use_tpu and config:
+      data_parallelism = config.data_parallelism
+    reuse = tf.get_variable_scope().reuse
+
+    # Instantiate model
+    self = cls(
+        hparams,
+        mode,
+        data_parallelism=data_parallelism,
+        decode_hparams=decode_hparams,
+        _reuse=reuse)
+
+    real_data = common_layers.convert_rgb_to_real(features['inputs'])  # rename inputs for clarity
+    generator_inputs = tf.random_uniform([self.hparams.batch_size,
+                                          self.hparams.bottleneck_bits],
+                                          minval=-1, maxval=1, name="z")
+
+    # rename inputs for clarity
+    out_shape = common_layers.shape_list(real_data)[1:4]
+
+    if mode == model_fn_lib.ModeKeys.PREDICT:
+      if real_data is not None:
+        raise ValueError('`labels` must be `None` when mode is `predict`. '
+                           'Instead, found %s' % real_data)
+      gan_model = _make_prediction_gan_model(generator_inputs,
+                                                   partial(self.generator, is_training=is_training, out_shape=out_shape),
+                                                   'Generator')
+    # Here should be where we export the model as tf hub
+
+    else:  # model_fn_lib.ModeKeys.TRAIN or model_fn_lib.ModeKeys.EVAL
+           # Manual gan_model creation
+      with tf.variable_scope('Generator') as gen_scope:
+        generated_images = self.generator(generator_inputs, is_training=is_training, out_shape=out_shape)
+
+      with tf.variable_scope('Discriminator') as dis_scope:
+        discriminator_gen_outputs = self.discriminator(generated_images, is_training=is_training, output_size=1)
+
+      with tf.variable_scope(dis_scope, reuse=True):
+        discriminator_real_outputs = self.discriminator(real_data, is_training=is_training, output_size=1)
+
+      tf.summary.image("generated", pack_images(generated_images, 4, 4), max_outputs=1)
+      tf.summary.image("real", pack_images(real_data, 4, 4), max_outputs=1)
+
+      generator_variables = variable_lib.get_trainable_variables(gen_scope)
+      discriminator_variables = variable_lib.get_trainable_variables(dis_scope)
+
+      gan_model = tfgan.GANModel(
+                generator_inputs,
+                generated_images,
+                generator_variables,
+                gen_scope,
+                self.generator,
+                real_data,
+                discriminator_real_outputs,
+                discriminator_gen_outputs,
+                discriminator_variables,
+                dis_scope,
+                self.discriminator)
+
+      opt_gen = tf.train.AdamOptimizer(hparams.learning_rate)
+      opt_disc = tf.train.AdamOptimizer(hparams.learning_rate)
+
+      loss = tfgan.gan_loss(gan_model)
+
+    # Make the EstimatorSpec, which incorporates the GANModel, losses, eval
+    # metrics, and optimizers (if required).
+    return _get_estimator_spec(
+      mode, gan_model, loss.generator_loss, loss.discriminator_loss,
+      None, opt_gen, opt_disc, None, True)
+
+
+@registry.register_model
+class SpectralNormGan(SlicedGanLarge):
+  """ SN-GAN based on tfgan estimator API
+  """
+
+  def discriminator(self, x, is_training, reuse=False,
+                    output_size=1):
+    hparams = self.hparams
+    depth = hparams.hidden_size
+	do_update = is_training and (not reuse)
+    with tf.variable_scope(
+        "discriminator", reuse=reuse):
+      batch_size, height, width = common_layers.shape_list(x)[:3]
+
+      for i in xrange(int(log(height, 2))):
+        current_depth = depth * 2**i
+        net = tf.layers.conv2d(x, current_depth, 4, strides=2,
+                             padding="SAME", name="d_conv%d"%i,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
+                                                                       name='sn%d'%i))
+        net = tf.nn.leaky_relu(net)
+      net = tf.layers.flatten(net)
+      net = tf.layers.dense(net, output_size, name="d_fcn", activation=None,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
+                                                                       name='fn_final'))
+      return net
+
+  @classmethod
+  def estimator_model_fn(cls,
+                         hparams,
+                         features,
+                         labels,
+                         mode,
+                         config=None,
+                         params=None,
+                         decode_hparams=None,
+                         use_tpu=False):
+
+    if mode not in [model_fn_lib.ModeKeys.TRAIN, model_fn_lib.ModeKeys.EVAL,
+                  model_fn_lib.ModeKeys.PREDICT]:
+      raise ValueError('Mode not recognized: %s' % mode)
+
+    if mode is model_fn_lib.ModeKeys.TRAIN:
+      is_training = True
+    else:
+      is_training = False
+
+    hparams = hparams_lib.copy_hparams(hparams)
 
     # Instantiate model
     data_parallelism = None
@@ -325,7 +324,7 @@ def gan_large():
   hparams.learning_rate_schedule = "constant * linear_warmup"
   hparams.label_smoothing = 0.0
   hparams.batch_size = 128
-  hparams.hidden_size = 256
+  hparams.hidden_size = 64
   hparams.initializer = "uniform_unit_scaling"
   hparams.initializer_gain = 1.0
   hparams.weight_decay = 1e-6
@@ -333,5 +332,4 @@ def gan_large():
   hparams.kernel_width = 4
   hparams.add_hparam("bottleneck_bits", 128)
   hparams.add_hparam("discriminator_batchnorm", True)
-  hparams.add_hparam("num_sliced_vecs", 4096)
   return hparams
