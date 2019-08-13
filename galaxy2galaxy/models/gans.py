@@ -76,7 +76,7 @@ class WGAN(vanilla_gan.SlicedGan):
       net = tf.layers.conv2d_transpose(net, depth, 4, strides=2,
                                        padding='SAME', name='conv')
       out = tf.layers.conv2d(net, c_dim, 1, activation=tf.nn.tanh)
-	  return out
+      return out
 
   def discriminator(self, x, is_training, reuse=False,
                     output_size=1):
