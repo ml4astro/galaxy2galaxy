@@ -135,7 +135,7 @@ class WGAN(vanilla_gan.SlicedGan):
         decode_hparams=decode_hparams,
         _reuse=reuse)
 
-    real_data = common_layers.convert_rgb_to_real(features['inputs'])  # rename inputs for clarity
+    real_data = common_layers.convert_rgb_to_symmetric_real(features['inputs'])  # rename inputs for clarity
     generator_inputs = tf.random_uniform([self.hparams.batch_size,
                                           self.hparams.bottleneck_bits],
                                           minval=-1, maxval=1, name="z")
