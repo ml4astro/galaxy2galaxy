@@ -319,6 +319,7 @@ def gan_large():
   """Basic parameters for large gan."""
   hparams = common_hparams.basic_params1()
   hparams.optimizer = "adam"
+  hparams.learning_rate = 0.0001
   hparams.learning_rate_constant = 0.0002
   hparams.learning_rate_warmup_steps = 500
   hparams.learning_rate_schedule = "constant * linear_warmup"

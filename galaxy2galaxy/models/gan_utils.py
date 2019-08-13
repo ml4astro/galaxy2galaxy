@@ -30,7 +30,9 @@ class SpectralNormConstraint(tf.keras.constraints.Constraint):
         with tf.variable_scope(self.name):
             w, assign_op = apply_spectral_norm(w)
         if self.update:
-          tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, assign_op)
+          with tf.control_dependencies([assign_op]):
+            w = w*1.0
+          # tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, assign_op)
         return w
 
 def _softplus_generator_loss(
