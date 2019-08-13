@@ -124,28 +124,28 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
       net = tf.reshape(net, [batch_size, height // 16, width // 16, 128])
       # Size [6, 6, 128]
 
-      net = tf.layers.conv2d_transpose(net, 128, 3, strides=2,
+      net = tf.layers.conv2d_transpose(net, 256, 4, strides=2,
                                        padding='SAME', use_bias=False, name='conv1') # output_size 16x16
       net = tf.layers.batch_normalization(net, training=is_training,
                                           momentum=0.999, name="conv_bn1")
       net = lrelu(net)
 
       # Size [12, 12, 128]
-      net = tf.layers.conv2d_transpose(net, 128, 3, strides=2,
+      net = tf.layers.conv2d_transpose(net, 128, 4, strides=2,
                                        padding='SAME', use_bias=False, name='conv2') # output_size 16x16
       net = tf.layers.batch_normalization(net, training=is_training,
                                           momentum=0.999, name="conv_bn2")
       net = lrelu(net)
 
       # Size [24, 24, 128]
-      net = tf.layers.conv2d_transpose(net, 128, 3, strides=2,
+      net = tf.layers.conv2d_transpose(net, 64, 4, strides=2,
                                        padding='SAME', use_bias=False, name='conv3') # output_size 16x16
       net = tf.layers.batch_normalization(net, training=is_training,
                                           momentum=0.999, name="conv_bn3")
       net = lrelu(net)
 
       # Size [48, 48, 128]
-      net = tf.layers.conv2d_transpose(net, 128, 3, strides=2,
+      net = tf.layers.conv2d_transpose(net, 32, 4, strides=2,
                                        padding='SAME', use_bias=False, name='conv4') # output_size 16x16
       net = tf.layers.batch_normalization(net, training=is_training,
                                           momentum=0.999, name="conv_bn4")
