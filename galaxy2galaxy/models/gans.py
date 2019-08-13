@@ -161,7 +161,7 @@ class GanEstimator(SlicedGanLarge):
     """
 
   def discriminator(self, x, is_training, reuse=False,
-                    output_size=1024):
+                    output_size=1):
     """Discriminator architecture with Spectral Normalization.
 
     Args:
@@ -238,7 +238,11 @@ class GanEstimator(SlicedGanLarge):
 
     if mode is model_fn_lib.ModeKeys.TRAIN:
       is_training = True
-      hparams = hparams_lib.copy_hparams(hparams)
+    else:
+      is_training = False
+
+    hparams = hparams_lib.copy_hparams(hparams)
+
 
     # Instantiate model
     data_parallelism = None
@@ -280,7 +284,7 @@ class GanEstimator(SlicedGanLarge):
         discriminator_gen_outputs = self.discriminator(generated_images, is_training=is_training)
 
       with tf.variable_scope(dis_scope, reuse=True):
-        discriminator_real_outputs = self.discriminator(real_data, is_training=is_training)
+        discriminator_real_outputs = self.discriminator(real_data, is_training=is_training, reuse=True)
 
       tf.summary.image("generated", pack_images(generated_images, 4, 4), max_outputs=1)
       tf.summary.image("real", pack_images(real_data, 4, 4), max_outputs=1)
