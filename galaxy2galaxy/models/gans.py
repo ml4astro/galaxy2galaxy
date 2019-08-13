@@ -54,24 +54,24 @@ class WGAN(vanilla_gan.SlicedGan):
     hparams = self.hparams
     height, width, c_dim = out_shape
     depth = hparams.hidden_size
-	num_layers = int(log(height, 2)) - 1
-	base_shape = height // 2**(num_layers)
+    num_layers = int(log(height, 2)) - 1
+    base_shape = height // 2**(num_layers)
 
     with tf.variable_scope("generator"):
-	  current_depth = depth * 2 ** (num_layers - 1)
+      current_depth = depth * 2 ** (num_layers - 1)
       net = tf.layers.dense(z, base_shape*base_shape*current_depth, name="dense_1")
-	  net = tf.layers.batch_normalization(net, training=is_training,
+      net = tf.layers.batch_normalization(net, training=is_training,
                                           name="dense_bn1")
-	  net = tf.nn.leaky_relu(net)
+      net = tf.nn.leaky_relu(net)
       net = tf.reshape(net, [-1, base_shape, base_shape, current_depth])
 
-	  for i in range(1, num_layers):
-		current_depth = depth * 2 ** (num_layers - i)
-	    net = tf.layers.conv2d_transpose(net, current_depth, 4, strides=2,
+      for i in range(1, num_layers):
+        current_depth = depth * 2 ** (num_layers - i)
+        net = tf.layers.conv2d_transpose(net, current_depth, 4, strides=2,
                                        padding='SAME', use_bias=False, name='conv%d'%i) # output_size 16x16
         net = tf.layers.batch_normalization(net, training=is_training,
                                             name="conv_bn%d"%i)
-      	net = tf.nn.leaky_rely(net)
+        net = tf.nn.leaky_rely(net)
 
       net = tf.layers.conv2d_transpose(net, depth, 4, strides=2,
                                        padding='SAME', name='conv')
