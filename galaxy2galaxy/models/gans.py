@@ -26,8 +26,6 @@ from tensor2tensor.layers import common_hparams
 from galaxy2galaxy.utils import registry
 from galaxy2galaxy.models.gan_utils import softplus_discriminator_loss, softplus_generator_loss, SpectralNormConstraint
 
-from galaxy2galaxy.models.gan_utils import generator, discriminator
-
 def pack_images(images, rows, cols):
     """Helper utility to make a field of images."""
     shape = tf.shape(images)
