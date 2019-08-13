@@ -23,7 +23,7 @@ from tensor2tensor.utils import hparams_lib
 from tensor2tensor.layers import common_layers
 
 from galaxy2galaxy.utils import registry
-from galaxy2galaxy.models.gan_utils import softplus_discriminator_loss, softplus_generator_loss, SperctralNormConstraint
+from galaxy2galaxy.models.gan_utils import softplus_discriminator_loss, softplus_generator_loss, SpectralNormConstraint
 
 
 def pack_images(images, rows, cols):
@@ -182,40 +182,40 @@ class GanEstimator(SlicedGanLarge):
       # Mapping x from [bs, h, w, c] to [bs, 1]
       net = tf.layers.conv2d(x, 32, (3, 3), strides=(1, 1),
                              padding="SAME", name="d_conv1",
-                             kernel_constraint=SperctralNormConstraint(update=do_update,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
                                                                        name='sn1'))
       net = lrelu(net)
       net = tf.layers.conv2d(net, 64, (4, 4), strides=(2, 2),
                              padding="SAME", name="d_conv1b",
-                             kernel_constraint=SperctralNormConstraint(update=do_update,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
                                                                        name='sn1b'))
       # [bs, h/2, w/2, 64]
       net = lrelu(net)
       net = tf.layers.conv2d(net, 64, (3, 3), strides=(1, 1),
                              padding="SAME", name="d_conv2",
-                             kernel_constraint=SperctralNormConstraint(update=do_update,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
                                                                        name='sn2'))
       net = lrelu(net)
       net = tf.layers.conv2d(net, 128, (4, 4), strides=(2, 2),
                              padding="SAME", name="d_conv2b",
-                             kernel_constraint=SperctralNormConstraint(update=do_update,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
                                                                        name='sn2b'))
       # [bs, h/4, w/4, 128]
       net = lrelu(net)
       net = tf.layers.conv2d(net, 128, (3, 3), strides=(1, 1),
                              padding="SAME", name="d_conv3",
-                             kernel_constraint=SperctralNormConstraint(update=do_update,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
                                                                        name='sn3'))
       net = lrelu(net)
       net = tf.layers.conv2d(net, 256, (4, 4), strides=(2, 2),
                              padding="SAME", name="d_conv3b",
-                             kernel_constraint=SperctralNormConstraint(update=do_update,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
                                                                        name='sn3b'))
       # [bs, h/8, w/8, 256]
       net = lrelu(net)
       net = tf.layers.flatten(net)
       net = tf.layers.dense(net, output_size, name="d_fc3",
-                             kernel_constraint=SperctralNormConstraint(update=do_update,
+                             kernel_constraint=SpectralNormConstraint(update=do_update,
                                                                        name='sn4'))  # [bs, 1024]
 
       net = lrelu(net)

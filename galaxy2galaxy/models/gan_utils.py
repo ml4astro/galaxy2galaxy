@@ -19,7 +19,7 @@ from tensorflow.python.util import tf_inspect as inspect
 from tensor2tensor.layers.common_layers import apply_spectral_norm
 
 
-class SperctraNormConstraint(tf.keras.constraints.Constraint):
+class SpectralNormConstraint(tf.keras.constraints.Constraint):
     """Constrains the weights to be normalized.
     """
     def __init__(self, update, name):
