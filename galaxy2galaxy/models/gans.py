@@ -324,7 +324,7 @@ def gan_large():
   hparams.learning_rate_warmup_steps = 500
   hparams.learning_rate_schedule = "constant * linear_warmup"
   hparams.label_smoothing = 0.0
-  hparams.batch_size = 128
+  hparams.batch_size = 64
   hparams.hidden_size = 64
   hparams.initializer = "uniform_unit_scaling"
   hparams.initializer_gain = 1.0
