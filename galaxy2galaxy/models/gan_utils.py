@@ -10,6 +10,7 @@ from tensorflow_gan.python.estimator.gan_estimator import Optimizers, get_gan_mo
 from tensorflow_gan.python import train as tfgan_train
 from tensorflow.python.estimator import model_fn as model_fn_lib
 
+from tensor2tensor.utils import hparams_lib
 from tensor2tensor.utils import t2t_model
 
 from tensorflow_gan.examples.self_attention_estimator import ops
