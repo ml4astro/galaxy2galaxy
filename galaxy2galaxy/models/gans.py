@@ -111,7 +111,7 @@ class SlicedGanLarge(vanilla_gan.SlicedGan):
     height, width, c_dim = out_shape
     batch_size = hparams.batch_size
     with tf.variable_scope("generator",
-        kernel_initializer=tf.random_normal_initializer(stddev=0.02)):
+        initializer=tf.random_normal_initializer(stddev=0.02)):
       net = tf.layers.dense(z, 1024, name="g_fc1")
       net = tf.layers.batch_normalization(net, training=is_training,
                                           momentum=0.999, name="g_bn1")
