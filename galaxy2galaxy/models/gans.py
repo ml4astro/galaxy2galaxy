@@ -52,6 +52,8 @@ class SelfAttentionGan(AbstractGAN):
       act3 = up_block(act2, gf_dim * 4, 'g_block3', training)  # 32
       act3 = ops.sn_non_local_block_sim(act3, training, name='g_ops')  # 32
       act4 = up_block(act3, gf_dim * 2, 'g_block4', training)  # 64
+      if p.noise_sigma >0:
+        act4 += p.noise_sigma*tf.random_normal(act4.shape)
       act5 = up_block(act4, gf_dim, 'g_block5', training)  # 128
       bn = ops.BatchNorm(name='g_bn')
 
@@ -120,4 +122,5 @@ def sagan():
   hparams.add_hparam("generator_lr", 0.0001)
   hparams.add_hparam("discriminator_lr", 0.0004)
   hparams.add_hparam("beta1", 0.5)
+  hparams.add_hparam("noise_sigma", 0.1)
   return hparams
