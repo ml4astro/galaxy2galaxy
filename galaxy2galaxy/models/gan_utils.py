@@ -106,8 +106,8 @@ class AbstractGAN(t2t_model.T2TModel):
     # Make the EstimatorSpec, which incorporates the GANModel, losses, eval
     # metrics, and optimizers (if required).
     if mode == tf.estimator.ModeKeys.TRAIN:
-      train_steps=namedtuples.GANTrainSteps(hparams.gen_steps, hparams.disc_steps))
-      estimator_spec = get_train_estimator_spec(gan_model, gan_loss, optimizers, None, train_steps=train_steps, is_chief=True)
+      get_hooks_fn = tfgan_train.get_sequential_train_hooks(namedtuples.GANTrainSteps(hparams.gen_steps, hparams.disc_steps))
+      estimator_spec = get_train_estimator_spec(gan_model, gan_loss, optimizers, get_hooks_fn,  is_chief=True)
     elif mode == tf.estimator.ModeKeys.EVAL:
       estimator_spec = get_eval_estimator_spec(gan_model, gan_loss)
     else:  # tf.estimator.ModeKeys.PREDICT
