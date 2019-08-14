@@ -52,7 +52,7 @@ class SelfAttentionGan(AbstractGAN):
       act3 = ops.sn_non_local_block_sim(act3, training, name='g_ops')  # 32
       act4 = up_block(act3, gf_dim * 2, 'g_block4', training)  # 64
       if p.noise_sigma >0:
-        act4 += p.noise_sigma*tf.random_normal(act4.shape)
+        act4 = tf.concat([act4, p.noise_sigma*tf.random_normal(act4.shape[:-1]+[1])],axis=-1)
       act5 = up_block(act4, gf_dim, 'g_block5', training)  # 128
       bn = ops.BatchNorm(name='g_bn')
 
