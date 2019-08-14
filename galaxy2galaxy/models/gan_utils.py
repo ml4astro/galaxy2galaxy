@@ -116,7 +116,7 @@ class AbstractGAN(t2t_model.T2TModel):
 
       # Create tf hub module for export
       def make_discriminator_spec():
-        input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(real_data)[1:4]))
+        input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(real_data)[1:4])
         disc_output = self.discriminator(input_layer, None, mode)
         hub.add_signature(inputs=input_layer, outputs=disc_output)
 
@@ -125,7 +125,7 @@ class AbstractGAN(t2t_model.T2TModel):
 
       # Create tf hub module for export
       def make_generator_spec():
-        input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(generator_inputs)[1:]))
+        input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(generator_inputs)[1:])
         gen_output = self.generator(input_layer, mode)
         hub.add_signature(inputs=input_layer, outputs=gen_output)
 
