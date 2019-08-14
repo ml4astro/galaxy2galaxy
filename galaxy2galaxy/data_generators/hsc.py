@@ -10,10 +10,12 @@ from . import astroimage_utils
 from tensor2tensor.data_generators import generator_utils
 from tensor2tensor.data_generators import image_utils
 from tensor2tensor.data_generators import problem
-from tensor2tensor.layers import modalities
+from tensor2tensor.layers import modalities, common_layers
 from tensor2tensor.utils import metrics
 
 from galaxy2galaxy.utils import registry
+
+from scipy.ndimage import gaussian_filter
 
 import tensorflow as tf
 import numpy as np
@@ -24,7 +26,7 @@ import h5py
 import os
 
 # HSC default pixel scale TODO: Check what's the correct scale
-_HSC_PIXEL_SCALE=0.2 #arcsec
+_HSC_PIXEL_SCALE=0.17501 #arcsec
 # Path to sql files for HSC samples
 _HSC_SAMPLE_SQL_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'hsc_utils')
 
@@ -73,7 +75,12 @@ class Img2imgHSC(astroimage_utils.AstroImageProblem):
         for row in catalog:
           cutout = cutouts[str(row['object_id'])]
           im = [cutout[f]['HDU0']['DATA'][:] for f in p.filters]
-          im = np.stack(im, axis=-1).astype('float32')
+
+          try:
+              im = np.stack(im, axis=-1).astype('float32')
+          except:
+              print('Failure to stack bands', [i.shape for i in im])
+              continue
 
           # Images may not have exactly the right number of pixels
           im = _resize_image(im, p.img_len)
@@ -114,7 +121,7 @@ class Img2imgHSC(astroimage_utils.AstroImageProblem):
     redownload it from the server.
     """
     p = self.get_hparams()
-    if (not os.path.isfile(os.path.join(tmp_dir, 'catalog.fits')) and
+    if (not os.path.isfile(os.path.join(tmp_dir, 'catalog.fits')) or
         not os.path.isfile(os.path.join(tmp_dir, 'cutouts.hdf')) ):
       hsc_utils.build_hsc_sample(p.sql_file,
                                  out_dir=tmp_dir,
@@ -131,12 +138,18 @@ class Img2imgHSCAnomaly(Img2imgHSC):
 
   def hparams(self, defaults, model_hparams):
     p = defaults
-    p.img_len = 96
+    p.img_len = 128
     p.filters = ['HSC-G', 'HSC-R', 'HSC-I']
     p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_anomaly.sql')
     p.data_release = 'pdr2'
     p.rerun = 'pdr2_wide'
     p.attributes = ['g_cmodel_mag', 'r_cmodel_mag', 'i_cmodel_mag', 'z_cmodel_mag']
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
 
   def preprocess_example(self, example, unused_mode, unused_hparams):
     """ Luptonize the examples, so that we can use t2t models easily
@@ -147,12 +160,98 @@ class Img2imgHSCAnomaly(Img2imgHSC):
     # Apply Luptonic Asinh stretch, and return uint8 rgb images
     def my_func(x):
       return make_lupton_rgb(x[...,2], x[...,1], x[...,0], Q=15, stretch=0.5, minimum=0)
-    
-    image = tf.py_func(my_func, [image], tf.uint8)
+
+    int_image = tf.py_func(my_func, [image], tf.uint8)
+    int_image.set_shape(image.shape)
 
     if hasattr(p, 'attributes'):
       example["attributes"] = tf.stack([example[k] for k in p.attributes])
 
+    example["inputs"] = int_image
+    example["targets"] = int_image
+    return example
+
+
+@registry.register_problem
+class Img2imgHSCAnomalySmall(Img2imgHSCAnomaly):
+  """ Dataset for anomaly detection on HSC data.
+  """
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Luptonize the examples, so that we can use t2t models easily
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    # Apply Luptonic Asinh stretch, and return uint8 rgb images
+    def my_func(x):
+      return make_lupton_rgb(x[...,2], x[...,1], x[...,0], Q=15, stretch=0.5, minimum=0)
+
+    int_image = tf.py_func(my_func, [image], tf.uint8)
+    int_image.set_shape(image.shape)
+    int_image = tf.image.resize_area(tf.expand_dims(int_image,axis=0), (p.img_len//3, p.img_len//3))
+    int_image = int_image[0]
+
+    if hasattr(p, 'attributes'):
+      example["attributes"] = tf.stack([example[k] for k in p.attributes])
+
+    example["inputs"] = int_image
+    example["targets"] = int_image
+    return example
+
+@registry.register_problem
+class Img2imgHSCAnomalyLarge(Img2imgHSCAnomaly):
+  """ Dataset for anomaly detection on HSC data.
+  """
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Luptonize the examples, so that we can use t2t models easily
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    # Apply Luptonic Asinh stretch, and return uint8 rgb images
+    def my_func(x):
+      return make_lupton_rgb(x[...,2], x[...,1], x[...,0], Q=15, stretch=0.5, minimum=0)
+
+    image =tf.image.resize_image_with_pad(tf.expand_dims(image,0),128,128)[0]
+    int_image = tf.py_func(my_func, [image], tf.uint8)
+    int_image.set_shape(image.shape)
+
+    if hasattr(p, 'attributes'):
+      example["attributes"] = tf.stack([example[k] for k in p.attributes])
+
+    image = common_layers.convert_rgb_to_symmetric_real(int_image)
+    example["inputs"] = image
+    example["targets"] = image
+    return example
+
+@registry.register_problem
+class Img2imgHSCAnomalyLargeSmooth(Img2imgHSCAnomaly):
+  """ Dataset for anomaly detection on HSC data.
+  """
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Luptonize the examples, so that we can use t2t models easily
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    # Apply Luptonic Asinh stretch, and return uint8 rgb images
+    def my_func(x):
+      return make_lupton_rgb(gaussian_filter(x[...,2],1),
+                             gaussian_filter(x[...,1],1),
+                             gaussian_filter(x[...,0],1),
+                             Q=15, stretch=0.5, minimum=0)
+
+    image =tf.image.resize_image_with_pad(tf.expand_dims(image,0),128,128)[0]
+    int_image = tf.py_func(my_func, [image], tf.uint8)
+    int_image.set_shape(image.shape)
+
+    if hasattr(p, 'attributes'):
+      example["attributes"] = tf.stack([example[k] for k in p.attributes])
+
+    image = common_layers.convert_rgb_to_symmetric_real(int_image)
     example["inputs"] = image
     example["targets"] = image
     return example

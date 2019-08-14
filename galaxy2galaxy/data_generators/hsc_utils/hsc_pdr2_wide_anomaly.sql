@@ -136,8 +136,26 @@ AND NOT f1.i_pixelflags_bright_object
 AND NOT f1.z_pixelflags_bright_object
 AND NOT f1.y_pixelflags_bright_object
 
+AND NOT f1.g_pixelflags_edge
+AND NOT f1.r_pixelflags_edge
+AND NOT f1.i_pixelflags_edge
+AND NOT f1.z_pixelflags_edge
+AND NOT f1.y_pixelflags_edge
+
+AND NOT f1.g_pixelflags_saturatedcenter
+AND NOT f1.r_pixelflags_saturatedcenter
+AND NOT f1.i_pixelflags_saturatedcenter
+AND NOT f1.z_pixelflags_saturatedcenter
+AND NOT f1.y_pixelflags_saturatedcenter
+
+AND NOT f1.g_cmodel_flag
+AND NOT f1.r_cmodel_flag
+AND NOT f1.i_cmodel_flag
+AND NOT f1.z_cmodel_flag
+AND NOT f1.y_cmodel_flag
+
     -- CModel magnitude limited
 AND f1.i_cmodel_mag < 20.5
 AND f1.i_cmodel_mag >= 20.0
 
-LIMIT 1000
+LIMIT 1000000
