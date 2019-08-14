@@ -8,9 +8,9 @@ import tensorflow as tf
 import tensorflow_gan as tfgan
 from tensorflow_gan.python.estimator.gan_estimator import Optimizers, get_gan_model, get_train_estimator_spec, get_eval_estimator_spec, get_predict_estimator_spec
 from tensorflow_gan.python import train as tfgan_train
+from tensorflow_gan.python import namedtuples
 from tensorflow_gan.python.estimator.gan_estimator import SummaryType
 from tensorflow.python.estimator import model_fn as model_fn_lib
-
 from tensor2tensor.utils import hparams_lib
 from tensor2tensor.utils import t2t_model
 from tensor2tensor.layers import common_layers
@@ -25,9 +25,6 @@ class AbstractGAN(t2t_model.T2TModel):
   def discriminator(self, x, conditioning, mode):
     raise NotImplementedError
 
-  def sample_noise(self):
-    raise NotImplementedError
-
   def discriminator_loss_fn(self):
     raise NotImplementedError
 
@@ -36,7 +33,13 @@ class AbstractGAN(t2t_model.T2TModel):
 
   @property
   def summaries(self):
-    return None
+    return [SummaryType.IMAGES]
+
+  def sample_noise(self):
+    p = self.hparams
+    shape = [p.batch_size, p.bottleneck_bits]
+    z = tf.random.normal(shape, name='z0', dtype=tf.float32)
+    return z
 
   @classmethod
   def estimator_model_fn(cls,
@@ -103,7 +106,8 @@ class AbstractGAN(t2t_model.T2TModel):
     # Make the EstimatorSpec, which incorporates the GANModel, losses, eval
     # metrics, and optimizers (if required).
     if mode == tf.estimator.ModeKeys.TRAIN:
-      estimator_spec = get_train_estimator_spec(gan_model, gan_loss, optimizers, None, is_chief=True)
+      train_steps=namedtuples.GANTrainSteps(hparams.gen_steps, hparams.disc_steps))
+      estimator_spec = get_train_estimator_spec(gan_model, gan_loss, optimizers, None, train_steps=train_steps, is_chief=True)
     elif mode == tf.estimator.ModeKeys.EVAL:
       estimator_spec = get_eval_estimator_spec(gan_model, gan_loss)
     else:  # tf.estimator.ModeKeys.PREDICT
