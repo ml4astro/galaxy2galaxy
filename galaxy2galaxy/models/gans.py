@@ -40,7 +40,7 @@ class SelfAttentionGan(AbstractGAN):
     """
     training = (mode == tf.estimator.ModeKeys.TRAIN)
     p = self.hparams
-    gf_dim = p.gf_dims
+    gf_dim = p.hidden_size
     with tf.variable_scope('generator', reuse=tf.AUTO_REUSE) as gen_scope:
       act0 = ops.snlinear(code, gf_dim * 16 * 4 * 4, training=training, name='g_snh0')
       act0 = tf.reshape(act0, [-1, 4, 4, gf_dim * 16])
@@ -72,7 +72,7 @@ class SelfAttentionGan(AbstractGAN):
         - A list containing all trainable varaibles defined by the model.
     """
     p = self.hparams
-    df_dim = p.df_dims
+    df_dim = p.hidden_size
     training = (mode == tf.estimator.ModeKeys.TRAIN)
     act=tf.nn.relu
     with tf.variable_scope('discriminator', reuse=tf.AUTO_REUSE) as dis_scope:
@@ -94,10 +94,6 @@ class SelfAttentionGan(AbstractGAN):
   def discriminator_loss(selg, *args, **kwargs):
     return tfgan.losses.wasserstein_hinge_discriminator_loss(*args, **kwargs)
 
-  @property
-  def summaries(self):
-    return [SummaryType.IMAGES]
-
 @registry.register_hparams
 def sagan():
   """Basic parameters for 128x128 SAGAN."""
@@ -109,17 +105,17 @@ def sagan():
   hparams.learning_rate_schedule = "constant * linear_warmup"
   hparams.label_smoothing = 0.0
   hparams.batch_size = 64
-  hparams.hidden_size = 64
+  hparams.hidden_size = 32
   hparams.initializer = "uniform_unit_scaling"
   hparams.initializer_gain = 1.0
   hparams.weight_decay = 1e-6
   hparams.kernel_height = 4
   hparams.kernel_width = 4
   hparams.add_hparam("bottleneck_bits", 128)
-  hparams.add_hparam("df_dims", 32)
-  hparams.add_hparam("gf_dims", 32)
   hparams.add_hparam("generator_lr", 0.0001)
   hparams.add_hparam("discriminator_lr", 0.0004)
-  hparams.add_hparam("beta1", 0.5)
-  hparams.add_hparam("noise_sigma", 0.1)
+  hparams.add_hparam("beta1", 0.)
+  hparams.add_hparam("noise_sigma", 0.)
+  hparams.add_hparam("gen_steps", 1)
+  hparams.add_hparam("disc_steps", 1)
   return hparams
