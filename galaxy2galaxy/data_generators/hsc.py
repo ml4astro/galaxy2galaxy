@@ -163,95 +163,11 @@ class Img2imgHSCAnomaly(Img2imgHSC):
 
     int_image = tf.py_func(my_func, [image], tf.uint8)
     int_image.set_shape(image.shape)
-
-    if hasattr(p, 'attributes'):
-      example["attributes"] = tf.stack([example[k] for k in p.attributes])
-
-    example["inputs"] = int_image
-    example["targets"] = int_image
-    return example
-
-
-@registry.register_problem
-class Img2imgHSCAnomalySmall(Img2imgHSCAnomaly):
-  """ Dataset for anomaly detection on HSC data.
-  """
-
-  def preprocess_example(self, example, unused_mode, unused_hparams):
-    """ Luptonize the examples, so that we can use t2t models easily
-    """
-    p = self.get_hparams()
-    image = example["inputs"]
-
-    # Apply Luptonic Asinh stretch, and return uint8 rgb images
-    def my_func(x):
-      return make_lupton_rgb(x[...,2], x[...,1], x[...,0], Q=15, stretch=0.5, minimum=0)
-
-    int_image = tf.py_func(my_func, [image], tf.uint8)
-    int_image.set_shape(image.shape)
-    int_image = tf.image.resize_area(tf.expand_dims(int_image,axis=0), (p.img_len//3, p.img_len//3))
-    int_image = int_image[0]
-
-    if hasattr(p, 'attributes'):
-      example["attributes"] = tf.stack([example[k] for k in p.attributes])
-
-    example["inputs"] = int_image
-    example["targets"] = int_image
-    return example
-
-@registry.register_problem
-class Img2imgHSCAnomalyLarge(Img2imgHSCAnomaly):
-  """ Dataset for anomaly detection on HSC data.
-  """
-
-  def preprocess_example(self, example, unused_mode, unused_hparams):
-    """ Luptonize the examples, so that we can use t2t models easily
-    """
-    p = self.get_hparams()
-    image = example["inputs"]
-
-    # Apply Luptonic Asinh stretch, and return uint8 rgb images
-    def my_func(x):
-      return make_lupton_rgb(x[...,2], x[...,1], x[...,0], Q=15, stretch=0.5, minimum=0)
-
-    image =tf.image.resize_image_with_pad(tf.expand_dims(image,0),128,128)[0]
-    int_image = tf.py_func(my_func, [image], tf.uint8)
-    int_image.set_shape(image.shape)
-
-    if hasattr(p, 'attributes'):
-      example["attributes"] = tf.stack([example[k] for k in p.attributes])
-
     image = common_layers.convert_rgb_to_symmetric_real(int_image)
-    example["inputs"] = image
-    example["targets"] = image
-    return example
-
-@registry.register_problem
-class Img2imgHSCAnomalyLargeSmooth(Img2imgHSCAnomaly):
-  """ Dataset for anomaly detection on HSC data.
-  """
-
-  def preprocess_example(self, example, unused_mode, unused_hparams):
-    """ Luptonize the examples, so that we can use t2t models easily
-    """
-    p = self.get_hparams()
-    image = example["inputs"]
-
-    # Apply Luptonic Asinh stretch, and return uint8 rgb images
-    def my_func(x):
-      return make_lupton_rgb(gaussian_filter(x[...,2],1),
-                             gaussian_filter(x[...,1],1),
-                             gaussian_filter(x[...,0],1),
-                             Q=15, stretch=0.5, minimum=0)
-
-    image =tf.image.resize_image_with_pad(tf.expand_dims(image,0),128,128)[0]
-    int_image = tf.py_func(my_func, [image], tf.uint8)
-    int_image.set_shape(image.shape)
 
     if hasattr(p, 'attributes'):
       example["attributes"] = tf.stack([example[k] for k in p.attributes])
 
-    image = common_layers.convert_rgb_to_symmetric_real(int_image)
     example["inputs"] = image
     example["targets"] = image
     return example
