@@ -13,7 +13,7 @@ from tensor2tensor.utils import trainer_lib
 from tensor2tensor.utils import usr_dir
 
 from galaxy2galaxy import models
-from galaxy2galaxy.utils import registry
+from galaxy2galaxy import problems
 
 import tensorflow as tf
 import tensorflow_hub as hub
