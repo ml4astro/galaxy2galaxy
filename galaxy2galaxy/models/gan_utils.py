@@ -8,14 +8,12 @@ import tensorflow as tf
 import tensorflow_gan as tfgan
 from tensorflow_gan.python.estimator.gan_estimator import Optimizers, get_gan_model, get_train_estimator_spec, get_eval_estimator_spec, get_predict_estimator_spec
 from tensorflow_gan.python import train as tfgan_train
+from tensorflow_gan.python.estimator.gan_estimator import SummaryType
 from tensorflow.python.estimator import model_fn as model_fn_lib
 
 from tensor2tensor.utils import hparams_lib
 from tensor2tensor.utils import t2t_model
 from tensor2tensor.layers import common_layers
-
-from tensorflow_gan.examples.self_attention_estimator import ops
-from tensorflow_gan.python.estimator.gan_estimator import SummaryType
 
 class AbstractGAN(t2t_model.T2TModel):
   """ Base class for tf-gan based models
@@ -79,7 +77,7 @@ class AbstractGAN(t2t_model.T2TModel):
     real_data = features['inputs']        # rename inputs for clarity
     generator_inputs = self.sample_noise()
     real_data.set_shape([hparams.batch_size]+common_layers.shape_list(real_data)[1:4])
-    
+
     optimizers = Optimizers(tf.compat.v1.train.AdamOptimizer(
           hparams.generator_lr, hparams.beta1),
           tf.compat.v1.train.AdamOptimizer(

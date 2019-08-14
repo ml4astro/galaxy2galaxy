@@ -15,8 +15,7 @@ from galaxy2galaxy.utils import registry
 from galaxy2galaxy.models.gan_utils import up_block, down_block, down_optimized_block, AbstractGAN
 from galaxy2galaxy.models.gan_utils import SummaryType
 
-from tensorflow_gan.examples.self_attention_estimator import ops
-
+from galaxy2galaxy.models import spectral_ops as ops
 
 @registry.register_model
 class SelfAttentionGan(AbstractGAN):
