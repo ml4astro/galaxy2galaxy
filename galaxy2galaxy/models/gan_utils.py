@@ -6,6 +6,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 import tensorflow_gan as tfgan
+import tensorflow_hub as hub
+
 from tensorflow_gan.python.estimator.gan_estimator import Optimizers, get_gan_model, get_train_estimator_spec, get_eval_estimator_spec, get_predict_estimator_spec
 from tensorflow_gan.python import train as tfgan_train
 from tensorflow_gan.python import namedtuples
@@ -111,8 +113,30 @@ class AbstractGAN(t2t_model.T2TModel):
     elif mode == tf.estimator.ModeKeys.EVAL:
       estimator_spec = get_eval_estimator_spec(gan_model, gan_loss)
     else:  # tf.estimator.ModeKeys.PREDICT
-      estimator_spec = get_predict_estimator_spec(gan_model)
 
+      # Create tf hub module for export
+      def make_discriminator_spec():
+        input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(real_data)[1:4]))
+        disc_output = self.discriminator(input_layer, None, mode)
+        hub.add_signature(inputs=input_layer, outputs=disc_output)
+
+      disc_spec = hub.create_module_spec(make_discriminator_spec)
+      disc_module = hub.Module(disc_spec, name="Discriminator")
+
+      # Create tf hub module for export
+      def make_generator_spec():
+        input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(generator_inputs)[1:]))
+        gen_output = self.generator(input_layer, mode)
+        hub.add_signature(inputs=input_layer, outputs=gen_output)
+
+      gen_spec = hub.create_module_spec(make_generator_spec)
+      gen_module = hub.Module(gen_spec, name="Generator")
+
+      # Register and export encoder and decoder modules
+      hub.register_module_for_export(disc_module, "discriminator")
+      hub.register_module_for_export(gen_module, "generator")
+
+      estimator_spec = get_predict_estimator_spec(gan_model)
     return estimator_spec
 
 def usample(x):
