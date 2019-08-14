@@ -83,13 +83,15 @@ class AbstractGAN(t2t_model.T2TModel):
         _reuse=reuse)
 
     generator_inputs = self.sample_noise()
+    # rename inputs for clarity
+    real_data = features['inputs']
+    img_shape = common_layers.shape_list(real_data)[1:4]
+    real_data.set_shape([hparams.batch_size]+img_shape)
 
     # To satify the TFGAN API setting real data to none on predict
     if mode == tf.estimator.ModeKeys.PREDICT:
       real_data =None
-    else:
-      real_data = features['inputs']        # rename inputs for clarity
-      real_data.set_shape([hparams.batch_size]+common_layers.shape_list(real_data)[1:4])
+
 
     optimizers = Optimizers(tf.compat.v1.train.AdamOptimizer(
           hparams.generator_lr, hparams.beta1),
@@ -124,7 +126,7 @@ class AbstractGAN(t2t_model.T2TModel):
 
       # Create tf hub module for export
       def make_discriminator_spec():
-        input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(real_data)[1:4])
+        input_layer = tf.placeholder(tf.float32, shape=[None] + img_shape)
         disc_output = self.discriminator(input_layer, None, mode)
         hub.add_signature(inputs=input_layer, outputs=disc_output)
 
