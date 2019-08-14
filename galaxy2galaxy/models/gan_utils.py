@@ -17,6 +17,9 @@ from tensor2tensor.utils import hparams_lib
 from tensor2tensor.utils import t2t_model
 from tensor2tensor.layers import common_layers
 
+from galaxy2galaxy.layers import spectral_ops as ops
+
+
 class AbstractGAN(t2t_model.T2TModel):
   """ Base class for tf-gan based models
   """

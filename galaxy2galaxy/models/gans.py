@@ -52,7 +52,7 @@ class SelfAttentionGan(AbstractGAN):
       act3 = ops.sn_non_local_block_sim(act3, training, name='g_ops')  # 32
       act4 = up_block(act3, gf_dim * 2, 'g_block4', training)  # 64
       if p.noise_sigma >0:
-        act4 = tf.concat([act4, p.noise_sigma*tf.random_normal(act4.shape[:-1]+[1])],axis=-1)
+        act4 = tf.concat([act4, p.noise_sigma*tf.random_normal((p.batch_size, 64, 64,3))],axis=-1)
       act5 = up_block(act4, gf_dim, 'g_block5', training)  # 128
       bn = ops.BatchNorm(name='g_bn')
 
@@ -118,4 +118,30 @@ def sagan():
   hparams.add_hparam("noise_sigma", 0.)
   hparams.add_hparam("gen_steps", 1)
   hparams.add_hparam("disc_steps", 1)
+  return hparams
+
+@registry.register_hparams
+def sagan_noise():
+  """Basic parameters for 128x128 SAGAN."""
+  hparams = common_hparams.basic_params1()
+  hparams.optimizer = "adam"
+  hparams.learning_rate = 0.0001
+  hparams.learning_rate_constant = 0.0002
+  hparams.learning_rate_warmup_steps = 500
+  hparams.learning_rate_schedule = "constant * linear_warmup"
+  hparams.label_smoothing = 0.0
+  hparams.batch_size = 64
+  hparams.hidden_size = 32
+  hparams.initializer = "uniform_unit_scaling"
+  hparams.initializer_gain = 1.0
+  hparams.weight_decay = 1e-6
+  hparams.kernel_height = 4
+  hparams.kernel_width = 4
+  hparams.add_hparam("bottleneck_bits", 128)
+  hparams.add_hparam("generator_lr", 0.0001)
+  hparams.add_hparam("discriminator_lr", 0.0004)
+  hparams.add_hparam("beta1", 0.)
+  hparams.add_hparam("noise_sigma", 0.1)
+  hparams.add_hparam("gen_steps", 1)
+  hparams.add_hparam("disc_steps", 3)
   return hparams
