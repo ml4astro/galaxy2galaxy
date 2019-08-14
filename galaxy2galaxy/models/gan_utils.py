@@ -82,9 +82,14 @@ class AbstractGAN(t2t_model.T2TModel):
         decode_hparams=decode_hparams,
         _reuse=reuse)
 
-    real_data = features['inputs']        # rename inputs for clarity
     generator_inputs = self.sample_noise()
-    real_data.set_shape([hparams.batch_size]+common_layers.shape_list(real_data)[1:4])
+
+    # To satify the TFGAN API setting real data to none on predict
+    if mode == tf.estimator.ModeKeys.PREDICT:
+      real_data =None
+    else:
+      real_data = features['inputs']        # rename inputs for clarity
+      real_data.set_shape([hparams.batch_size]+common_layers.shape_list(real_data)[1:4])
 
     optimizers = Optimizers(tf.compat.v1.train.AdamOptimizer(
           hparams.generator_lr, hparams.beta1),

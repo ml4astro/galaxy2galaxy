@@ -98,9 +98,6 @@ def main(_):
 
   estimator = create_estimator(run_config, hparams)
 
-  toto= problem.serving_input_fn(hparams, decode_hparams, FLAGS.use_tpu)
-  print(toto)
-
   # Use tf hub to export any module that has been registered
   exporter = hub.LatestModuleExporter("tf_hub",
         lambda: problem.serving_input_fn(hparams, decode_hparams, FLAGS.use_tpu))
