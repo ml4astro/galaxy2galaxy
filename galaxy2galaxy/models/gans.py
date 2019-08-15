@@ -16,7 +16,7 @@ from galaxy2galaxy.models.gan_utils import AbstractGAN
 from galaxy2galaxy.models.gan_utils import SummaryType
 
 from galaxy2galaxy.layers import spectral_ops as ops
-from galaxy2galaxy.layers.spectral_ops import up_block, down_block, down_optimized_block
+from galaxy2galaxy.layers.common_layers import up_block, down_block, down_optimized_block
 
 
 @registry.register_model
