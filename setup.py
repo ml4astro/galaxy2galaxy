@@ -19,6 +19,9 @@ setup(
     ],
     install_requires=[
         'six',
+        'scipy',
+        'numpy',
+        'astropy',
         'tensor2tensor',
         'tensorflow',
         'tensorflow-hub',
