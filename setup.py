@@ -19,14 +19,15 @@ setup(
     ],
     install_requires=[
         'six',
-        'tensorflow',
         'tensor2tensor',
+        'tensorflow',
+        'tensorflow-hub',
         'tensorflow-datasets',
         'tensorflow-probability',
         'tensorflow-gan',
         'fits2hdf',
-        'unagi',
-        'galsim'
+        'galsim',
+        'unagi'
     ],
     extras_require={
         'tensorflow': ['tensorflow>=1.13.1'],
@@ -53,5 +54,6 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
+    dependency_links=['git+https://github.com/EiffL/unagi.git@b581e84624c04de4346f944b822441835cd1880d#egg=<unagi>-0.1'],
     keywords='astronomy machine learning',
 )
