@@ -10,7 +10,7 @@ setup(
     description='Galaxy2Galaxy',
     author='ML4Astro Contributors',
     url='http://github.com/ml4astro/galaxy2galaxy',
-    license='Apache 2.0',
+    license='MIT',
     packages=find_packages(),
     scripts=[
         'galaxy2galaxy/bin/g2g-trainer',
