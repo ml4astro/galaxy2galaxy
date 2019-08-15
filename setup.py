@@ -51,11 +51,12 @@ setup(
         ],
     },
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Apache Software License',
+        'License :: OSI Approved :: MIT License',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'Topic :: Scientific/Engineering :: Astronomy'
     ],
     dependency_links=['git+https://github.com/EiffL/unagi.git@b581e84624c04de4346f944b822441835cd1880d#egg=<unagi>-0.1'],
     keywords='astronomy machine learning',

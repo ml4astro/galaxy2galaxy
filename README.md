@@ -7,9 +7,9 @@ learning models applied to astronomical image processing problems.
 
 G2G can easily be installed using pip:
 ```
-$ pip install --user git+https://github.com/EiffL/unagi.git # [Until proposed changes get merged into main unagi]
-$ pip install --user git+https://github.com/ml4astro/galaxy2galaxy
+$ pip install galaxy2galaxy[galsim]
 ```
+
 
 ## Usage
 
