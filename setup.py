@@ -3,15 +3,20 @@
 from setuptools import find_packages
 from setuptools import setup
 
+# read the contents of the README file
+with open('README.md', encoding="utf-8") as f:
+    long_description = f.read()
 
 setup(
     name='galaxy2galaxy',
-    version='0.0.1rc',
     description='Galaxy2Galaxy',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     author='ML4Astro Contributors',
     url='http://github.com/ml4astro/galaxy2galaxy',
     license='MIT',
     packages=find_packages(),
+    package_data={'': ['*.sql'],},
     scripts=[
         'galaxy2galaxy/bin/g2g-trainer',
         'galaxy2galaxy/bin/g2g-datagen',
@@ -60,4 +65,7 @@ setup(
     ],
     dependency_links=['git+https://github.com/EiffL/unagi.git@b581e84624c04de4346f944b822441835cd1880d#egg=<unagi>-0.1'],
     keywords='astronomy machine learning',
+    use_scm_version=True,
+    include_package_data=True,
+    setup_requires=['setuptools_scm'],
 )
