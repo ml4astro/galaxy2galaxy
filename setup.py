@@ -28,7 +28,7 @@ setup(
         'scipy',
         'numpy',
         'astropy',
-        'tensor2tensor',
+        'tensor2tensor>=1.13.4',
         'tensorflow',
         'tensorflow-hub',
         'tensorflow-datasets',
@@ -64,7 +64,7 @@ setup(
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Scientific/Engineering :: Astronomy'
     ],
-    dependency_links=['git+https://github.com/EiffL/unagi.git@b581e84624c04de4346f944b822441835cd1880d#egg=<unagi>-0.1'],
+    dependency_links=['git+https://github.com/EiffL/unagi.git@b581e84624c04de4346f944b822441835cd1880d#egg=unagi-0.1'],
     keywords='astronomy machine learning',
     use_scm_version=True,
     include_package_data=True,
