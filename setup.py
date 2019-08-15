@@ -8,13 +8,14 @@ setup(
     name='galaxy2galaxy',
     version='0.0.1rc',
     description='Galaxy2Galaxy',
-    author='ML4Astro',
+    author='ML4Astro Contributors',
     url='http://github.com/ml4astro/galaxy2galaxy',
     license='Apache 2.0',
     packages=find_packages(),
     scripts=[
         'galaxy2galaxy/bin/g2g-trainer',
         'galaxy2galaxy/bin/g2g-datagen',
+        'galaxy2galaxy/bin/g2g-exporter',
     ],
     install_requires=[
         'six',
@@ -24,7 +25,8 @@ setup(
         'tensorflow-probability',
         'tensorflow-gan',
         'fits2hdf',
-        'unagi'
+        'unagi',
+        'galsim'
     ],
     extras_require={
         'tensorflow': ['tensorflow>=1.13.1'],
