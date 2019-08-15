@@ -8,9 +8,15 @@ import six
 from six.moves import range  # pylint: disable=redefined-builtin
 
 MODULES = [
-    "galaxy2galaxy.data_generators.cosmos",
     "galaxy2galaxy.data_generators.hsc"
 ]
+# Modules that depend on galsim, only include if available
+try:
+  import galsim
+  MODULES += ["galaxy2galaxy.data_generators.cosmos"]
+except:
+  print("Could not import GalSim, excluding some data generators")
+
 ALL_MODULES = list(MODULES)
 
 
