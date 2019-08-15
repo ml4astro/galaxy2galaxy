@@ -8,7 +8,7 @@ learning models applied to astronomical image processing problems.
 
 G2G can easily be installed using pip:
 ```
-$ pip install galaxy2galaxy
+$ pip install galaxy2galaxy[galsim]
 ```
 
 Should the install fail because of the GalSim dependency, check the GalSim [install
