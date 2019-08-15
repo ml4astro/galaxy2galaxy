@@ -12,10 +12,12 @@ from tensor2tensor.layers import common_layers
 from tensor2tensor.layers import common_hparams
 
 from galaxy2galaxy.utils import registry
-from galaxy2galaxy.models.gan_utils import up_block, down_block, down_optimized_block, AbstractGAN
+from galaxy2galaxy.models.gan_utils import AbstractGAN
 from galaxy2galaxy.models.gan_utils import SummaryType
 
 from galaxy2galaxy.layers import spectral_ops as ops
+from galaxy2galaxy.layers.common_layers import up_block, down_block, down_optimized_block
+
 
 @registry.register_model
 class SelfAttentionGan(AbstractGAN):

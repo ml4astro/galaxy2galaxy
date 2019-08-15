@@ -6,6 +6,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 import tensorflow_gan as tfgan
+import tensorflow_hub as hub
+
 from tensorflow_gan.python.estimator.gan_estimator import Optimizers, get_gan_model, get_train_estimator_spec, get_eval_estimator_spec, get_predict_estimator_spec
 from tensorflow_gan.python import train as tfgan_train
 from tensorflow_gan.python import namedtuples
@@ -80,9 +82,15 @@ class AbstractGAN(t2t_model.T2TModel):
         decode_hparams=decode_hparams,
         _reuse=reuse)
 
-    real_data = features['inputs']        # rename inputs for clarity
     generator_inputs = self.sample_noise()
-    real_data.set_shape([hparams.batch_size]+common_layers.shape_list(real_data)[1:4])
+    # rename inputs for clarity
+    real_data = features['inputs']
+    img_shape = common_layers.shape_list(real_data)[1:4]
+    real_data.set_shape([hparams.batch_size]+img_shape)
+
+    # To satify the TFGAN API setting real data to none on predict
+    if mode == tf.estimator.ModeKeys.PREDICT:
+      real_data =None
 
     optimizers = Optimizers(tf.compat.v1.train.AdamOptimizer(
           hparams.generator_lr, hparams.beta1),
@@ -90,10 +98,31 @@ class AbstractGAN(t2t_model.T2TModel):
           hparams.discriminator_lr, hparams.beta1)
           )
 
+    # Creates tfhub modules for both generator and discriminator
+    def make_discriminator_spec():
+      input_layer = tf.placeholder(tf.float32, shape=[None] + img_shape)
+      disc_output = self.discriminator(input_layer, None, mode)
+      hub.add_signature(inputs=input_layer, outputs=disc_output)
+    disc_spec = hub.create_module_spec(make_discriminator_spec)
+
+    def make_generator_spec():
+      input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(generator_inputs)[1:])
+      gen_output = self.generator(input_layer, mode)
+      hub.add_signature(inputs=input_layer, outputs=gen_output)
+    gen_spec = hub.create_module_spec(make_generator_spec)
+
+    # Create the modules
+    discriminator_module = hub.Module(disc_spec, name="Discriminator_Module", trainable=True)
+    generator_module = hub.Module(gen_spec, name="Generator_Module", trainable=True)
+
+    # Wraps the modules into functions expected by TF-GAN
+    generator = lambda code, mode: generator_module(code)
+    discriminator =  lambda image, conditioning, mode: discriminator_module(image)
+
     # Make GANModel, which encapsulates the GAN model architectures.
     gan_model = get_gan_model(mode,
-                              self.generator,
-                              self.discriminator,
+                              generator,
+                              discriminator,
                               real_data,
                               generator_inputs,
                               add_summaries=self.summaries)
@@ -114,109 +143,8 @@ class AbstractGAN(t2t_model.T2TModel):
     elif mode == tf.estimator.ModeKeys.EVAL:
       estimator_spec = get_eval_estimator_spec(gan_model, gan_loss)
     else:  # tf.estimator.ModeKeys.PREDICT
+      # Register hub modules for export
+      hub.register_module_for_export(generator_module, "generator")
+      hub.register_module_for_export(discriminator_module, "discriminator")
       estimator_spec = get_predict_estimator_spec(gan_model)
-
     return estimator_spec
-
-def usample(x):
-  """Upsamples the input volume.
-  Args:
-    x: The 4D input tensor.
-  Returns:
-    An upsampled version of the input tensor.
-  """
-  # Allow the batch dimension to be unknown at graph build time.
-  _, image_height, image_width, n_channels = x.shape.as_list()
-  # Add extra degenerate dimension after the dimensions corresponding to the
-  # rows and columns.
-  expanded_x = tf.expand_dims(tf.expand_dims(x, axis=2), axis=4)
-  # Duplicate data in the expanded dimensions.
-  after_tile = tf.tile(expanded_x, [1, 1, 2, 1, 2, 1])
-  return tf.reshape(after_tile,
-                    [-1, image_height * 2, image_width * 2, n_channels])
-
-def up_block(x, out_channels, name, training=True):
-  """Builds the residual blocks used in the generator.
-  Args:
-    x: The 4D input tensor.
-    out_channels: Integer number of features in the output layer.
-    name: The variable scope name for the block.
-    training: Whether this block is for training or not.
-  Returns:
-    A `Tensor` representing the output of the operation.
-  """
-  with tf.variable_scope(name):
-    bn0 = ops.BatchNorm(name='bn_0')
-    bn1 = ops.BatchNorm(name='bn_1')
-    x_0 = x
-    x = tf.nn.relu(bn0(x))
-    x = usample(x)
-    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, training, 'snconv1')
-    x = tf.nn.relu(bn1(x))
-    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, training, 'snconv2')
-
-    x_0 = usample(x_0)
-    x_0 = ops.snconv2d(x_0, out_channels, 1, 1, 1, 1, training, 'snconv3')
-
-    return x_0 + x
-
-def dsample(x):
-  """Downsamples the input volume by means of average pooling.
-  Args:
-    x: The 4D input tensor.
-  Returns:
-    An downsampled version of the input tensor.
-  """
-  xd = tf.nn.avg_pool(x, [1, 2, 2, 1], [1, 2, 2, 1], 'VALID')
-  return xd
-
-def down_block(x, out_channels, name, downsample=True, act=tf.nn.relu):
-  """Builds the residual blocks used in the discriminator.
-  Args:
-    x: The 4D input vector.
-    out_channels: Number of features in the output layer.
-    name: The variable scope name for the block.
-    downsample: If True, downsample the spatial size the input tensor by
-                a factor of 2 on each side. If False, the spatial size of the
-                input tensor is unchanged.
-    act: The activation function used in the block.
-  Returns:
-    A `Tensor` representing the output of the operation.
-  """
-  with tf.variable_scope(name):
-    input_channels = x.shape.as_list()[-1]
-    x_0 = x
-    x = act(x)
-    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, name='sn_conv1')
-    x = act(x)
-    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, name='sn_conv2')
-    if downsample:
-      x = dsample(x)
-    if downsample or input_channels != out_channels:
-      x_0 = ops.snconv2d(x_0, out_channels, 1, 1, 1, 1, name='sn_conv3')
-      if downsample:
-        x_0 = dsample(x_0)
-    return x_0 + x
-
-
-def down_optimized_block(x, out_channels, name, act=tf.nn.relu):
-  """Builds optimized residual blocks for downsampling.
-  Compared with block, optimized_block always downsamples the spatial resolution
-  by a factor of 2 on each side.
-  Args:
-    x: The 4D input vector.
-    out_channels: Number of features in the output layer.
-    name: The variable scope name for the block.
-    act: The activation function used in the block.
-  Returns:
-    A `Tensor` representing the output of the operation.
-  """
-  with tf.variable_scope(name):
-    x_0 = x
-    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, name='sn_conv1')
-    x = act(x)
-    x = ops.snconv2d(x, out_channels, 3, 3, 1, 1, name='sn_conv2')
-    x = dsample(x)
-    x_0 = dsample(x_0)
-    x_0 = ops.snconv2d(x_0, out_channels, 1, 1, 1, 1, name='sn_conv3')
-    return x + x_0
