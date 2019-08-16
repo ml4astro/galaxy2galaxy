@@ -28,7 +28,7 @@ import os
 # HSC default pixel scale TODO: Check what's the correct scale
 _HSC_PIXEL_SCALE=0.17501 #arcsec
 # Path to sql files for HSC samples
-_HSC_SAMPLE_SQL_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'hsc_utils')
+_HSC_SAMPLE_SQL_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'hsc_utils/queries')
 
 def _resize_image(im, size):
   centh = im.shape[0]/2
