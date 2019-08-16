@@ -171,3 +171,39 @@ class Img2imgHSCAnomaly(Img2imgHSC):
     example["inputs"] = image
     example["targets"] = image
     return example
+
+
+@registry.register_problem
+class Img2PhotozHSC(Img2imgHSC):
+  """ Dataset for photoz estimation on HSC data.
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.img_len = 64
+    p.filters = ['HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z', 'HSC-Y']
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_photoz.sql')
+    p.data_release = 'pdr2'
+    p.rerun = 'pdr2_wide'
+    p.attributes = ['a_g', 'a_r', 'a_i', 'a_z', 'a_y',
+                   'g_cmodel_mag', 'r_cmodel_mag', 'i_cmodel_mag', 'z_cmodel_mag',
+                   'specz_redshift', 'specz_redshift_err']
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Luptonize the examples, so that we can use t2t models easily
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    if hasattr(p, 'attributes'):
+      example["attributes"] = tf.stack([example[k] for k in p.attributes])
+
+    example["inputs"] = image
+    example["targets"] = example['specz_redshift']
+    return example

@@ -31,6 +31,8 @@ FROM pdr2_wide.forced forced
 	INNER JOIN pdr2_wide.specz USING (object_id)
 WHERE forced.isprimary AND specz.specz_flag_homogeneous
 
+AND d_pos <= 0.2
+
 AND forced.g_inputcount_value >= 3
 AND forced.r_inputcount_value >= 3
 AND forced.i_inputcount_value >= 3
