@@ -48,9 +48,8 @@ class Image(ItemHandler):
       format_key: the name of the TF-Example feature in which the image format
         is stored.
       shape: the output shape of the image as 1-D `Tensor`
-        [height, width, channels]. If provided, the image is reshaped
-        accordingly. If left as None, no reshaping is done. A shape should
-        be supplied only if all the stored images have the same shape.
+        [height, width, channels]. The image is reshaped
+        accordingly.
       channels: the number of channels in the image.
       dtype: images will be decoded at this bit depth. Different formats
         support different bit depths.
@@ -102,11 +101,7 @@ class Image(ItemHandler):
     """
     # TODO: Assert that the image format is raw
     image = parsing_ops.decode_raw(image_buffer, out_type=self._dtype)
-
-    image.set_shape([None, None, self._channels])
-    if self._shape is not None:
-      image = array_ops.reshape(image, self._shape)
-
+    image = array_ops.reshape(image, self._shape)
     return image
 
 class AstroImageProblem(problem.Problem):
