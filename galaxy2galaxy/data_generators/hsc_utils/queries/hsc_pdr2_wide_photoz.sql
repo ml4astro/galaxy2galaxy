@@ -74,4 +74,6 @@ AND NOT forced.r_cmodel_flag
 AND NOT forced.i_cmodel_flag
 AND NOT forced.z_cmodel_flag
 AND NOT forced.y_cmodel_flag
+
+LIMIT 40000
 ;
