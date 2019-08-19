@@ -100,47 +100,14 @@ class Image(ItemHandler):
       A tensor that represents decoded image of self._shape, or
       (?, ?, self._channels) if self._shape is not specified.
     """
-
-    def decode_image():
-      """Decodes a image based on the headers."""
-      return math_ops.cast(
-          image_ops.decode_image(image_buffer, channels=self._channels),
-          self._dtype)
-
-    def decode_jpeg():
-      """Decodes a jpeg image with specified '_dct_method'."""
-      return math_ops.cast(
-          image_ops.decode_jpeg(
-              image_buffer,
-              channels=self._channels,
-              dct_method=self._dct_method), self._dtype)
-
-    def check_jpeg():
-      """Checks if an image is jpeg."""
-      # For jpeg, we directly use image_ops.decode_jpeg rather than decode_image
-      # in order to feed the jpeg specify parameter 'dct_method'.
-      return control_flow_ops.cond(
-          image_ops.is_jpeg(image_buffer),
-          decode_jpeg,
-          decode_image,
-          name='cond_jpeg')
-
-    def decode_raw():
-      """Decodes a raw image."""
-      return parsing_ops.decode_raw(image_buffer, out_type=self._dtype)
-
-    pred_fn_pairs = [(math_ops.logical_or(
-        math_ops.equal(image_format, 'raw'),
-        math_ops.equal(image_format, 'RAW')), decode_raw)]
-    image = control_flow_ops.case(
-        pred_fn_pairs, default=check_jpeg, exclusive=True)
+    # TODO: Assert that the image format is raw
+    image = parsing_ops.decode_raw(image_buffer, out_type=self._dtype)
 
     image.set_shape([None, None, self._channels])
     if self._shape is not None:
       image = array_ops.reshape(image, self._shape)
 
     return image
-
 
 class AstroImageProblem(problem.Problem):
   """Base class for image problems on astronomical images.
