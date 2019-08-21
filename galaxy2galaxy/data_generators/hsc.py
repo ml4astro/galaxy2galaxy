@@ -25,8 +25,8 @@ from astropy.visualization import make_lupton_rgb
 import h5py
 import os
 
-# HSC default pixel scale TODO: Check what's the correct scale
-_HSC_PIXEL_SCALE=0.17501 #arcsec
+# HSC default pixel scale
+_HSC_PIXEL_SCALE=0.168 #arcsec
 # Path to sql files for HSC samples
 _HSC_SAMPLE_SQL_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'hsc_utils/queries')
 
@@ -126,7 +126,7 @@ class Img2imgHSC(astroimage_utils.AstroImageProblem):
       hsc_utils.build_hsc_sample(p.sql_file,
                                  out_dir=tmp_dir,
                                  tmp_dir=os.path.join(tmp_dir,'tmp'),
-                                 cutout_size=p.img_len*_HSC_PIXEL_SCALE/2,
+                                 cutout_size=(1.5+p.img_len)*_HSC_PIXEL_SCALE/2, # Requesting slightly larger pixel size to avoid roundoff errors
                                  filters=p.filters,
                                  data_release=p.data_release,
                                  rerun=p.rerun)
