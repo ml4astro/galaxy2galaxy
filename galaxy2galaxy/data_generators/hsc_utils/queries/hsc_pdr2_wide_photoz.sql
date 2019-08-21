@@ -1,9 +1,11 @@
 -- Merge forced photometry and spectroscopic sample from HSC PDR 2 wide
-SELECT forced.object_id, ra, dec, tract, patch,
+SELECT object_id, ra, dec, tract, patch,
 	-- Absorption
 	a_g, a_r, a_i, a_z, a_y,
 	-- Extendedness
-	g_extendedness_value, r_extendedness_value, i_extendedness_value, z_extendedness_value, y_extendedness_value
+	g_extendedness_value, r_extendedness_value, i_extendedness_value, z_extendedness_value, y_extendedness_value,
+  -- Background Information
+  g_localbackground_flux, r_localbackground_flux, i_localbackground_flux, z_localbackground_flux, y_localbackground_flux,
 	-- Fluxes
 	g_cmodel_flux, g_cmodel_fluxsigma, g_cmodel_exp_flux, g_cmodel_exp_fluxsigma, g_cmodel_dev_flux, g_cmodel_dev_fluxsigma,
 	r_cmodel_flux, r_cmodel_fluxsigma, r_cmodel_exp_flux, r_cmodel_exp_fluxsigma, r_cmodel_dev_flux, r_cmodel_dev_fluxsigma,
@@ -29,51 +31,62 @@ FROM pdr2_wide.forced forced
   LEFT JOIN pdr2_wide.forced2 USING (object_id)
   LEFT JOIN pdr2_wide.forced3 USING (object_id)
 	INNER JOIN pdr2_wide.specz USING (object_id)
-WHERE forced.isprimary AND specz.specz_flag_homogeneous
 
-AND d_pos <= 0.2
-
+-- Applying some data quality cuts
+WHERE forced.isprimary
+-- Keep only objects with reliable spectroscopic redshifts
+AND specz.specz_flag_homogeneous
+-- no stars, quasars, or failures
+AND specz.specz_redshift < 9 AND specz.specz_redshift > 0.01
+-- error cut
+AND specz.specz_redshift_err < 0.005*(1 + specz.specz_redshift)
+-- Keeping only the matches that fall within 0.2 arcsec
+AND specz.d_pos <= 0.2
+-- Simple Full Depth Full Colour cuts: At least 3 exposures in each band
 AND forced.g_inputcount_value >= 3
 AND forced.r_inputcount_value >= 3
 AND forced.i_inputcount_value >= 3
 AND forced.z_inputcount_value >= 3
 AND forced.y_inputcount_value >= 3
-
+-- Remove objects affected by bright stars
 AND NOT forced.g_pixelflags_bright_objectcenter
 AND NOT forced.r_pixelflags_bright_objectcenter
 AND NOT forced.i_pixelflags_bright_objectcenter
 AND NOT forced.z_pixelflags_bright_objectcenter
 AND NOT forced.y_pixelflags_bright_objectcenter
-
 AND NOT forced.g_pixelflags_bright_object
 AND NOT forced.r_pixelflags_bright_object
 AND NOT forced.i_pixelflags_bright_object
 AND NOT forced.z_pixelflags_bright_object
 AND NOT forced.y_pixelflags_bright_object
-
+-- Remove objects intersecting edges
 AND NOT forced.g_pixelflags_edge
 AND NOT forced.r_pixelflags_edge
 AND NOT forced.i_pixelflags_edge
 AND NOT forced.z_pixelflags_edge
 AND NOT forced.y_pixelflags_edge
-
+-- Remove objects with saturated or interpolated pixels
 AND NOT forced.g_pixelflags_saturatedcenter
 AND NOT forced.r_pixelflags_saturatedcenter
 AND NOT forced.i_pixelflags_saturatedcenter
 AND NOT forced.z_pixelflags_saturatedcenter
 AND NOT forced.y_pixelflags_saturatedcenter
-
 AND NOT forced.g_pixelflags_interpolatedcenter
 AND NOT forced.r_pixelflags_interpolatedcenter
 AND NOT forced.i_pixelflags_interpolatedcenter
 AND NOT forced.z_pixelflags_interpolatedcenter
 AND NOT forced.y_pixelflags_interpolatedcenter
-
+AND NOT forced.g_pixelflags_bad
+AND NOT forced.r_pixelflags_bad
+AND NOT forced.i_pixelflags_bad
+AND NOT forced.z_pixelflags_bad
+AND NOT forced.y_pixelflags_bad
+-- Remove objects with generic cmodel fit failures
 AND NOT forced.g_cmodel_flag
 AND NOT forced.r_cmodel_flag
 AND NOT forced.i_cmodel_flag
 AND NOT forced.z_cmodel_flag
 AND NOT forced.y_cmodel_flag
-
-LIMIT 40000
+-- Sort by tract and patch for faster cutout query
+ORDER BY object_id
 ;
