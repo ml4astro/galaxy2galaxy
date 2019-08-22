@@ -1,11 +1,13 @@
 -- Merge forced photometry and spectroscopic sample from HSC PDR 2 wide
-SELECT object_id, ra, dec, tract, patch,
+SELECT DISTINCT ON (object_id) object_id, ra, dec, tract, patch,
 	-- Absorption
 	a_g, a_r, a_i, a_z, a_y,
 	-- Extendedness
 	g_extendedness_value, r_extendedness_value, i_extendedness_value, z_extendedness_value, y_extendedness_value,
   -- Background Information
   g_localbackground_flux, r_localbackground_flux, i_localbackground_flux, z_localbackground_flux, y_localbackground_flux,
+	-- Blending information from the i-band
+	i_deblend_skipped, i_blendedness_abs_flux, i_blendedness_old,
 	-- Fluxes
 	g_cmodel_flux, g_cmodel_fluxsigma, g_cmodel_exp_flux, g_cmodel_exp_fluxsigma, g_cmodel_dev_flux, g_cmodel_dev_fluxsigma,
 	r_cmodel_flux, r_cmodel_fluxsigma, r_cmodel_exp_flux, r_cmodel_exp_fluxsigma, r_cmodel_dev_flux, r_cmodel_dev_fluxsigma,
@@ -30,6 +32,7 @@ SELECT object_id, ra, dec, tract, patch,
 FROM pdr2_wide.forced forced
   LEFT JOIN pdr2_wide.forced2 USING (object_id)
   LEFT JOIN pdr2_wide.forced3 USING (object_id)
+	LEFT JOIN pdr2_wide.meas USING (object_id)
 	INNER JOIN pdr2_wide.specz USING (object_id)
 
 -- Applying some data quality cuts
@@ -48,6 +51,8 @@ AND forced.r_inputcount_value >= 3
 AND forced.i_inputcount_value >= 3
 AND forced.z_inputcount_value >= 3
 AND forced.y_inputcount_value >= 3
+-- Asking for extendedness at least in the i band
+AND forced.i_extendedness_value = 1
 -- Remove objects affected by bright stars
 AND NOT forced.g_pixelflags_bright_objectcenter
 AND NOT forced.r_pixelflags_bright_objectcenter
