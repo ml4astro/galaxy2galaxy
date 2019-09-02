@@ -174,7 +174,7 @@ class Img2imgHSCAnomaly(Img2imgHSC):
 
 
 @registry.register_problem
-class Img2PhotozHSC(Img2imgHSC):
+class Img2photozHSC(Img2imgHSC):
   """ Dataset for photoz estimation on HSC data.
   """
 
