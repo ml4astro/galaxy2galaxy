@@ -38,8 +38,6 @@ WHERE forced.isprimary
 AND specz.specz_flag_homogeneous
 -- no stars, quasars, or failures
 AND specz.specz_redshift < 9 AND specz.specz_redshift > 0.01
--- error cut
-AND specz.specz_redshift_err < 0.005*(1 + specz.specz_redshift)
 -- Keeping only the matches that fall within 0.2 arcsec
 AND specz.d_pos <= 0.2
 -- Simple Full Depth Full Colour cuts: At least 3 exposures in each band
