@@ -25,10 +25,10 @@ from astropy.visualization import make_lupton_rgb
 import h5py
 import os
 
-# HSC default pixel scale TODO: Check what's the correct scale
-_HSC_PIXEL_SCALE=0.17501 #arcsec
+# HSC default pixel scale
+_HSC_PIXEL_SCALE=0.168 #arcsec
 # Path to sql files for HSC samples
-_HSC_SAMPLE_SQL_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'hsc_utils')
+_HSC_SAMPLE_SQL_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'hsc_utils/queries')
 
 def _resize_image(im, size):
   centh = im.shape[0]/2
@@ -126,7 +126,7 @@ class Img2imgHSC(astroimage_utils.AstroImageProblem):
       hsc_utils.build_hsc_sample(p.sql_file,
                                  out_dir=tmp_dir,
                                  tmp_dir=os.path.join(tmp_dir,'tmp'),
-                                 cutout_size=p.img_len*_HSC_PIXEL_SCALE/2,
+                                 cutout_size=(1.5+p.img_len)*_HSC_PIXEL_SCALE/2, # Requesting slightly larger pixel size to avoid roundoff errors
                                  filters=p.filters,
                                  data_release=p.data_release,
                                  rerun=p.rerun)
@@ -170,4 +170,40 @@ class Img2imgHSCAnomaly(Img2imgHSC):
 
     example["inputs"] = image
     example["targets"] = image
+    return example
+
+
+@registry.register_problem
+class Img2photozHSC(Img2imgHSC):
+  """ Dataset for photoz estimation on HSC data.
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.img_len = 64
+    p.filters = ['HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z', 'HSC-Y']
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_photoz.sql')
+    p.data_release = 'pdr2'
+    p.rerun = 'pdr2_wide'
+    p.attributes = ['a_g', 'a_r', 'a_i', 'a_z', 'a_y',
+                   'g_cmodel_mag', 'r_cmodel_mag', 'i_cmodel_mag', 'z_cmodel_mag',
+                   'specz_redshift', 'specz_redshift_err']
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Luptonize the examples, so that we can use t2t models easily
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    if hasattr(p, 'attributes'):
+      example["attributes"] = tf.stack([example[k] for k in p.attributes])
+
+    example["inputs"] = image
+    example["targets"] = example['specz_redshift']
     return example
