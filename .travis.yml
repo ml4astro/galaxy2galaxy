@@ -20,6 +20,6 @@ script:
 
 deploy:
   provider: pypi
-  user: __token__
+  user: "__token__"
   password:
     secure: "Your encrypted password"
