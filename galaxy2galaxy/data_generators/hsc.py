@@ -49,7 +49,7 @@ class Img2imgHSC(astroimage_utils.AstroImageProblem):
     p = defaults
     p.img_len = 64
     p.filters = ['HSC-G', 'HSC-R', 'HSC-I', 'HSC-Z']
-    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_img2img.sql')
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_anomaly_small.sql')
     p.data_release = 'pdr2'
     p.rerun = 'pdr2_wide'
 
@@ -172,6 +172,25 @@ class Img2imgHSCAnomaly(Img2imgHSC):
     example["targets"] = image
     return example
 
+@registry.register_problem
+class Img2imgHSCAnomalySmall(Img2imgHSCAnomaly):
+  """ Dataset for anomaly detection on HSC data, but smaller.
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.img_len = 128
+    p.filters = ['HSC-G', 'HSC-R', 'HSC-I']
+    p.sql_file = os.path.join(_HSC_SAMPLE_SQL_DIR, 'hsc_pdr2_wide_anomaly_small.sql')
+    p.data_release = 'pdr2'
+    p.rerun = 'pdr2_wide'
+    p.attributes = ['g_cmodel_mag', 'r_cmodel_mag', 'i_cmodel_mag', 'z_cmodel_mag']
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
 
 @registry.register_problem
 class Img2photozHSC(Img2imgHSC):
