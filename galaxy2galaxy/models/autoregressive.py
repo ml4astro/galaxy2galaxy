@@ -35,7 +35,7 @@ class Img2imgPixelCNNpp(t2t_model.T2TModel):
     scale = tf.nn.softplus(scale) + 1e-4
     distribution = tfp.distributions.Independent( tfp.distributions.Normal(loc=loc, scale=scale))
 
-    return out, {"loss": - distribution.log_prob(features["targets"])}
+    return out, {"training": - distribution.log_prob(features["targets"])}
 
 @registry.register_hparams
 def image_transformer2d_base():
