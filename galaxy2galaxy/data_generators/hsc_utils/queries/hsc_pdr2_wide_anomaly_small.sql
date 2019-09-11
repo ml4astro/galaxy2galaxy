@@ -96,7 +96,7 @@ SELECT
 	m.i_cmodel_ellipse_11, m.i_cmodel_ellipse_22, m.i_cmodel_ellipse_12,
 	m.r_cmodel_exp_ellipse_11, m.r_cmodel_exp_ellipse_22, m.r_cmodel_exp_ellipse_12,
 	m.r_cmodel_dev_ellipse_11, m.r_cmodel_dev_ellipse_22, m.r_cmodel_dev_ellipse_12,
-	m.r_cmodel_ellipse_11, m.r_cmodel_ellipse_22, m.r_cmodel_ellipse_12
+	m.r_cmodel_ellipse_11, m.r_cmodel_ellipse_22, m.r_cmodel_ellipse_12,
 
     -- Meta information
     ---- input count
