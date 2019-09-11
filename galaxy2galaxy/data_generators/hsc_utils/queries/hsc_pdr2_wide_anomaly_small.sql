@@ -186,8 +186,8 @@ AND NOT f1.y_pixelflags_crcenter
 AND f1.i_cmodel_mag < 20.5
 AND f1.i_cmodel_mag >= 20.0
 
-LIMIT 100000
-
 -- Sort by tract and patch for faster cutout query
 ORDER BY f1.object_id
+
+LIMIT 100000
 ;
