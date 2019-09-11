@@ -4,13 +4,12 @@ addons:
     packages:
     - libhdf5-serial-dev
 python:
-- '3.5'
 - '3.6'
 - '3.7'
 install:
 - pip install .
-script:
-- pytest
+# script:
+# - pytest
 deploy:
   provider: pypi
   user: __token__
