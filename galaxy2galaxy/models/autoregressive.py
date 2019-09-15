@@ -18,6 +18,7 @@ from pixel_cnn_pp.model import model_spec
 
 import tensorflow as tf
 import tensorflow_probability as tfp
+import tensorflow_hub as hub
 
 def pack_images(images, rows, cols):
     """Helper utility to make a field of images."""
@@ -55,23 +56,51 @@ class Img2imgPixelCnn(t2t_model.T2TModel):
                   'nr_filters': hparams.hidden_size,
                   'nr_logistic_mix': 1,
                   'resnet_nonlinearity': 'concat_elu',
-                  'energy_distance': False}
+                  'energy_distance': False,
+                  'dropout_p': hparams.dropout}
 
-    model = tf.make_template('model', model_spec)
+    # Build the model spec
+    def make_model_spec():
+      input_layer = tf.placeholder(tf.float32, shape=features["inputs"].get_shape())
 
-    out = model(features["inputs"], None, ema=None,
-                    dropout_p=hparams.dropout, **model_opt)
+      model = tf.make_template('model', model_spec)
 
-    out = tf.layers.dense(out, 2, activation=None)
-    loc, scale = tf.split(out, num_or_size_splits=2, axis=-1)
-    scale = tf.nn.softplus(scale) + 1e-4
-    distribution = tfp.distributions.Independent( tfp.distributions.Normal(loc=loc, scale=scale))
+      out = model(input_layer, None, ema=None, **model_opt)
+      out = tf.layers.dense(out, 2, activation=None)
+      loc, scale = tf.split(out, num_or_size_splits=2, axis=-1)
+      scale = tf.nn.softplus(scale) + 1e-4
+      distribution = tfp.distributions.Independent( tfp.distributions.Normal(loc=loc, scale=scale))
 
-    self.image_summary("inputs", features["targets_raw"])
-    self.image_summary("loc", loc)
-    self.image_summary("scale", scale)
+      sample = distribution.sample()
+      log_prob = distribution.log_prob(input_layer)
+      hub.add_signature(inputs=input_layer,
+                        outputs={'sample': sample,
+                                 'log_prob': log_prob,
+                                 'logits':out,
+                                 'mu': loc,
+                                 'scale': scale})
 
-    return out, {"training": - distribution.log_prob(features["targets_raw"])}
+    spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
+    pixelcnn = hub.Module(spec, name="pixelcnn_module", trainable=True)
+    hub.register_module_for_export(pixelcnn, "pixelcnn")
+
+    output = pixelcnn(features["inputs"], as_dict=True)
+
+    self.image_summary("inputs", features["inputs"])
+    self.image_summary("samples", output["sample"])
+
+    return output["logits"], {"training": - output["log_prob"]}
+
+  def infer(self,
+            features=None,
+            decode_length=50,
+            beam_size=1,
+            top_beams=1,
+            alpha=0.0,
+            use_tpu=False):
+    """ TODO: Switch to parent inference function
+    """
+    return self(features)[0]
 
 @registry.register_hparams
 def pixelcnnpp_base():
@@ -90,8 +119,7 @@ def pixelcnnpp_base():
   hparams.weight_decay = 0.0
   hparams.optimizer_adam_beta1 = 0.9
   hparams.optimizer_adam_beta2 = 0.98
-  hparams.bottom["targets"] = modalities.make_targets_bottom(
-      modalities.image_channel_embeddings_bottom)
+  hparams.bottom["targets"] = modalities.identity_bottom
   hparams.top["targets"] = modalities.identity_top
   hparams.norm_type = "layer"
   hparams.layer_prepostprocess_dropout = 0.0
