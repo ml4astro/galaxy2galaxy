@@ -36,7 +36,6 @@ def pack_images(images, rows, cols):
     images = tf.reshape(images, [1, rows * width, cols * height, depth])
     return images
 
-
 @registry.register_model
 class Img2imgPixelCnn(t2t_model.T2TModel):
 
@@ -59,32 +58,33 @@ class Img2imgPixelCnn(t2t_model.T2TModel):
                   'energy_distance': False,
                   'dropout_p': hparams.dropout}
 
-    # Build the model spec
-    def make_model_spec():
-      input_layer = tf.placeholder(tf.float32, shape=features["inputs"].get_shape())
-
+    def pixel_cnn_fn(input_layer):
       model = tf.make_template('model', model_spec)
-
       out = model(input_layer, None, ema=None, **model_opt)
       out = tf.layers.dense(out, 2, activation=None)
       loc, scale = tf.split(out, num_or_size_splits=2, axis=-1)
       scale = tf.nn.softplus(scale) + 1e-4
       distribution = tfp.distributions.Independent( tfp.distributions.Normal(loc=loc, scale=scale))
-
       sample = distribution.sample()
       log_prob = distribution.log_prob(input_layer)
-      hub.add_signature(inputs=input_layer,
-                        outputs={'sample': sample,
-                                 'log_prob': log_prob,
-                                 'logits':out,
-                                 'mu': loc,
-                                 'scale': scale})
+      output = {'sample': sample, 'log_prob': log_prob,
+                'logits':out, 'mu': loc, 'scale': scale}
+      return output
 
-    spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
-    pixelcnn = hub.Module(spec, name="pixelcnn_module", trainable=True)
-    hub.register_module_for_export(pixelcnn, "pixelcnn")
-
-    output = pixelcnn(features["inputs"], as_dict=True)
+    # During predict, we use a tf hub module, otherwise we stick to normal
+    # behavior to allow for multi gpu training
+    if hparams.mode == tf.estimator.ModeKeys.PREDICT:
+      def make_model_spec():
+        input_layer = tf.placeholder(tf.float32, shape=features["inputs"].get_shape())
+        outputs = pixel_cnn_fn(input_layer)
+        hub.add_signature(inputs=input_layer, outputs=outputs)
+      spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
+      pixelcnn = hub.Module(spec, name="pixelcnn_module", trainable=True)
+      hub.register_module_for_export(pixelcnn, "pixelcnn")
+      output = pixelcnn(features["inputs"], as_dict=True)
+    else:
+      with tf.variable_scope('pixelcnn_module'):
+        output = pixel_cnn_fn(features["inputs"])
 
     self.image_summary("inputs", features["inputs"])
     self.image_summary("samples", output["sample"])
