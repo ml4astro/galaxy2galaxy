@@ -55,6 +55,7 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     p.vocab_size = {"inputs": None,
                     "targets": None}
     p.add_hparam("psf", None)
+    p.add_hparam("rotation", False)
 
   @property
   def num_bands(self):
@@ -105,6 +106,13 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
       else:
           psf = p.psf
 
+      # Apply random rotation if requested
+      if p.rotation:
+        rotation_angle = galsim.Angle(-np.random.rand()* 2 * np.pi,
+                                      galsim.radians)
+        gal = gal.rotate(rotation_angle)
+        psf = psf.rotate(rotation_angle)
+
       # We save the corresponding attributes for this galaxy
       if hasattr(p, 'attributes'):
         params = cat_param[ind]
@@ -152,6 +160,26 @@ class Img2imgCosmosHSC(Img2imgCosmos):
     p.vocab_size = {"inputs": None,
                     "targets": None}
     p.psf = galsim.InterpolatedImage(os.path.join(_COSMOS_DATA_DIR, 'hst_cosmos_effective_psf.fits'), scale=0.03)
+    p.rotation = True
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Preprocess the examples, can be used for further augmentation or
+    image standardization.
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    # Apply random augmentation
+    image = tf.image.random_flip_up_down(image)
+    image = tf.image.random_flip_left_right(image)
+
+    # Aggregate the conditions
+    if hasattr(p, 'attributes'):
+      example['attributes'] = tf.stack([example[k] for k in p.attributes])
+
+    example["inputs"] = image
+    example["targets"] = image
+    return example
 
 
 @registry.register_problem

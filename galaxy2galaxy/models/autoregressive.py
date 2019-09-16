@@ -67,8 +67,10 @@ class Img2imgPixelCnn(t2t_model.T2TModel):
       distribution = tfp.distributions.Independent( tfp.distributions.Normal(loc=loc, scale=scale))
       sample = distribution.sample()
       log_prob = distribution.log_prob(input_layer)
+      grads = tf.gradients(log_prob, input_layer)[0]
+      print(grads)
       output = {'sample': sample, 'log_prob': log_prob,
-                'logits':out, 'mu': loc, 'scale': scale}
+                'logits':out, 'mu': loc, 'scale': scale, 'grads': grads}
       return output
 
     # During predict, we use a tf hub module, otherwise we stick to normal
@@ -109,10 +111,10 @@ def pixelcnnpp_base():
   hparams.hidden_size = 64
   hparams.batch_size = 16
   hparams.dropout = 0.5
-  hparams.clip_grad_norm = 0.  # i.e. no gradient clipping
+  hparams.clip_grad_norm = 1.  # i.e. no gradient clipping
   hparams.optimizer_adam_epsilon = 1e-9
   hparams.learning_rate_decay_scheme = "noam"
-  hparams.learning_rate = 0.1
+  hparams.learning_rate = 0.001
   hparams.learning_rate_warmup_steps = 4000
   hparams.initializer_gain = 0.2
   hparams.initializer = "uniform_unit_scaling"
