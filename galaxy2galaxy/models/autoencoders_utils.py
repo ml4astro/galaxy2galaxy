@@ -145,13 +145,15 @@ def autoencoder_body(self, features):
            res, labels, vocab_size, temperature=vq_temperature)
     losses["code_loss"] = code_loss * hparams.code_loss_factor
     losses["training"] = targets_loss
+    logits = tf.reshape(reconstr, labels_shape + [vocab_size])
   else:
     reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
     reconstr = tf.reshape(reconstr, labels_shape)
 
-    pz = tf.reduce_sum(tf.abs(values - targets)**2, axis=[-1, -2, -3])
+    pz = tf.reduce_sum(tf.abs(reconstr - labels)**2, axis=[-1, -2, -3])
     targets_loss = tf.reduce_mean(pz)
     losses["training"] = targets_loss
+    logits = tf.reshape(reconstr, labels_shape)
 
   # GAN losses.
   if hparams.gan_loss_factor != 0.0:
@@ -226,5 +228,4 @@ def autoencoder_body(self, features):
 
   self.image_summary("ae", reconstr)
 
-  logits = tf.reshape(reconstr, labels_shape + [vocab_size])
   return logits, losses
