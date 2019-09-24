@@ -36,7 +36,7 @@ def autoencoder_body(self, features):
   """
   hparams = self.hparams
   is_training = hparams.mode == tf.estimator.ModeKeys.TRAIN
-  vocab_size = self._problem_hparams.vocab_size["targets"]
+  vocab_size = 64#self._problem_hparams.vocab_size["targets"]
   if hasattr(self._hparams, "vocab_divisor"):
     vocab_size += (-vocab_size) % self._hparams.vocab_divisor
   encoder_layers = None
@@ -118,10 +118,7 @@ def autoencoder_body(self, features):
   res = tf.reshape(res, output_shape)
 
   if hparams.mode == tf.estimator.ModeKeys.PREDICT:
-    if hparams.use_vq_loss:
-      (reconstr, _, _, _, _) = discretization.vq_loss(res, labels, vocab_size)
-    else:
-      reconstr = tf.layers.dense(res, vocab_size, name="autoencoder_final")
+    reconstr = tf.layers.dense(res, vocab_size, name="autoencoder_final")
     return reconstr, {"bottleneck_loss": 0.0}
 
   if hparams.gan_loss_factor != 0.0:
@@ -133,51 +130,25 @@ def autoencoder_body(self, features):
       "bottleneck_l2": hparams.bottleneck_l2_factor * xb_loss
   }
 
-  if hparams.use_vq_loss:
-    vq_temperature = hparams.vq_temperature / common_layers.inverse_exp_decay(
-        hparams.gan_codes_warmup_steps * 1.2,
-        min_value=hparams.vq_temperature * 2)
-    if hparams.mode != tf.estimator.ModeKeys.TRAIN:
-      vq_temperature = None
-    with tf.variable_scope("vq_loss"):
-      (reconstr, _, target_codes, code_loss,
-       targets_loss) = discretization.vq_loss(
-           res, labels, vocab_size, temperature=vq_temperature)
-    losses["code_loss"] = code_loss * hparams.code_loss_factor
-    losses["training"] = targets_loss
-    logits = tf.reshape(reconstr, labels_shape + [vocab_size])
-  else:
-    reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
-    reconstr = tf.reshape(reconstr, labels_shape)
+  reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
+  reconstr = tf.reshape(reconstr, labels_shape)
 
-    pz = tf.reduce_sum(tf.abs(reconstr - labels)**2, axis=[-1, -2, -3])
-    targets_loss = tf.reduce_mean(pz)
-    losses["training"] = targets_loss
-    logits = tf.reshape(reconstr, labels_shape)
+  pz = tf.reduce_sum(tf.abs(reconstr - labels)**2, axis=[-1, -2, -3])
+  targets_loss = tf.reduce_mean(pz)
+  losses["training"] = targets_loss
+  logits = tf.reshape(reconstr, labels_shape)
 
   # GAN losses.
   if hparams.gan_loss_factor != 0.0:
     update_means_factor = common_layers.inverse_exp_decay(
         hparams.gan_codes_warmup_steps, min_value=0.0001)
-    if hparams.use_vq_loss:
-      with tf.variable_scope("vq_loss", reuse=True):
-        update_means = tf.less(tf.random_uniform([]), update_means_factor)
-        reconstr_gan, gan_codes, _, code_loss_gan, _ = discretization.vq_loss(
-            res_gan,
-            labels,
-            vocab_size,
-            do_update=update_means,
-            temperature=vq_temperature)
-        reconstr_gan_nonoise = reconstr_gan
-        code_loss_gan *= hparams.code_loss_factor * update_means_factor
-        losses["code_loss_gan"] = code_loss_gan
-    else:
-      reconstr_gan = tf.layers.dense(
-          res_gan, vocab_size, name="autoencoder_final", reuse=True)
-      reconstr_gan_nonoise = reconstr_gan
-      reconstr_gan = self.gumbel_sample(reconstr_gan)
-      # Embed to codes.
-      gan_codes = self.embed(reconstr_gan)
+
+    reconstr_gan = tf.layers.dense(
+        res_gan, vocab_size, name="autoencoder_final", reuse=True)
+    reconstr_gan_nonoise = reconstr_gan
+    reconstr_gan = self.gumbel_sample(reconstr_gan)
+    # Embed to codes.
+    gan_codes = self.embed(reconstr_gan)
 
   # Add GAN loss if requested.
   gan_loss = 0.0
