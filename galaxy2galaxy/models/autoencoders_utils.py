@@ -49,7 +49,7 @@ def autoencoder_body(self, features):
     if len(labels.shape) == 5:
       labels = time_to_channels(labels)
     shape = common_layers.shape_list(labels)
-    x = self.embed(x)
+    x = self.embed(labels)
     target_codes = x
     if shape[2] == 1:
       self.is1d = True
