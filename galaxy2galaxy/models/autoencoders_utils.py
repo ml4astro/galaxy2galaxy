@@ -75,16 +75,43 @@ def autoencoder_body(self, features):
     input_shape =  [None, ] + common_layers.shape_list(features["inputs"])[1:]
     # First build encoder spec
     def make_model_spec():
-      input_layer = tf.placeholder(tf.float32, shape=input_shape)
+       input_layer = tf.placeholder(tf.float32, shape=input_shape)
       x = self.embed(tf.expand_dims(input_layer, -1))
       x, encoder_layers = self.encoder(x)
       b, b_loss = self.bottleneck(x)
       hub.add_signature(inputs=input_layer, outputs=b)
-    spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
+
+    def make_model_spec_psf():
+      input_layer = tf.placeholder(tf.float32, shape=input_shape)
+      psf_layer = tf.placeholder(tf.float32, shape=input_shape)
+      x = self.embed(tf.expand_dims(input_layer, -1))
+      x, encoder_layers = self.encoder(x)
+      net_psf = tf.layers.conv2d(features['psf'], hparams.hidden_size, 5,
+                               padding='same', name="psf_embed_1")
+      net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
+      kernel, strides = self._get_kernel_and_strides()
+      for i in range(hparams.num_hidden_layers):
+        net_psf = self.make_even_size(net_psf)
+        net_psf = tf.layers.conv2d(
+          net_psf,
+          hparams.hidden_size * 2**(i + 1),
+          kernel,
+          strides=strides,
+          padding="SAME",
+          activation=common_layers.belu,
+          name="conv_psf_%d" % i)
+        net_psf = common_layers.layer_norm(net_psf, name="psf_ln_%d" % i)
+      b, b_loss = self.bottleneck(tf.concat([x, net_psf], axis=-1))
+      hub.add_signature(inputs={'input':input_layer, 'psf':psf_layer}, outputs=b)
+
+    spec = hub.create_module_spec(make_model_spec_psf if hparams.encode_psf else make_model_spec, drop_collections=['checkpoints'])
     encoder = hub.Module(spec, name="encoder_module")
     hub.register_module_for_export(encoder, "encoder")
 
-    code = encoder(features["inputs"])
+    if hparams.encode_psf:
+      code = encoder({'inputs':features["inputs"], 'psf': features['psf']})
+    else:
+      code = encoder(features["inputs"])
     b_shape = [None, ] + common_layers.shape_list(code)[1:]
     res_size = self.hparams.hidden_size * 2**self.hparams.num_hidden_layers
     res_size = min(res_size, hparams.max_hidden_size)
