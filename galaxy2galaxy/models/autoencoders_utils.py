@@ -86,7 +86,7 @@ def autoencoder_body(self, features):
       psf_layer = tf.placeholder(tf.float32, shape=input_shape)
       x = self.embed(tf.expand_dims(input_layer, -1))
       x, encoder_layers = self.encoder(x)
-      net_psf = tf.layers.conv2d(features['psf'], hparams.hidden_size, 5,
+      net_psf = tf.layers.conv2d(psf_layer, hparams.hidden_size, 5,
                                padding='same', name="psf_embed_1")
       net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
       kernel, strides = self._get_kernel_and_strides()
