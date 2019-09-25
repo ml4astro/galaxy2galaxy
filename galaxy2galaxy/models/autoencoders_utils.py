@@ -75,7 +75,7 @@ def autoencoder_body(self, features):
     input_shape =  [None, ] + common_layers.shape_list(features["inputs"])[1:]
     # First build encoder spec
     def make_model_spec():
-       input_layer = tf.placeholder(tf.float32, shape=input_shape)
+      input_layer = tf.placeholder(tf.float32, shape=input_shape)
       x = self.embed(tf.expand_dims(input_layer, -1))
       x, encoder_layers = self.encoder(x)
       b, b_loss = self.bottleneck(x)
