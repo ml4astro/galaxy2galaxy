@@ -99,6 +99,13 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 channels=self.num_bands,
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
+
+        "ps": tf.contrib.slim.tfexample_decoder.Image(
+                image_key="ps/encoded",
+                format_key="ps/format",
+                channels=self.num_bands,
+                shape=[p.img_len, p.img_len // 2 + 1],
+                dtype=tf.complex64),
     }
 
     if hasattr(p, 'attributes'):

@@ -32,6 +32,22 @@ import tensorflow_hub as hub
 
 from galaxy2galaxy.layers.image_utils import pack_images
 
+def loglikelihood_fn(xin, yin, features, hparams):
+  if hparams.likelihood_type == 'Fourier':
+    x = tf.spectral.rfft2d(xin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.)
+    y = tf.spectral.rfft2d(yin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.)
+
+    # Compute FFT normalization factor
+    size = xin.get_shape().as_list()[1]
+    pz = tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2]) / size**2
+    return -pz
+  elif hparams.likelihood_type == 'Pixel':
+    # TODO: include per example noise std
+    pz = tf.reduce_sum(tf.abs(xin[:,:,:,0] - y)**2, axis=[-1, -2]) / hparams.noise_rms**2
+    return -pz
+  else:
+    raise NotImplementedError
+
 def image_summary(name, image_logits, max_outputs=1, rows=8, cols=8):
   """Helper for image summaries that are safe on TPU."""
   if len(image_logits.get_shape()) != 4:
@@ -93,21 +109,31 @@ def autoencoder_body(self, features):
       or self._encode_on_predict):
     labels = features["targets_raw"]
     labels_shape = common_layers.shape_list(labels)
-    # handle videos
-    if len(labels.shape) == 5:
-      labels = time_to_channels(labels)
+
     shape = common_layers.shape_list(labels)
     with tf.variable_scope('encoder_module'):
       x = self.embed(tf.expand_dims(labels, -1))
-    target_codes = x
+
     if shape[2] == 1:
       self.is1d = True
+
     # Run encoder.
     with tf.variable_scope('encoder_module'):
+      # If we have access to the PSF, we add this information to the encoder
+      if hparams.encode_psf and 'psf' in features:
+        im_psf = tf.expand_dims(tf.roll(tf.spectral.irfft2d(features['psf']),
+                                        shift=[shape[1]//2,shape[2]//2],
+                                        axis=[1,2]), axis=-1)
+        im_psf = tf.layers.conv2d(im_psf, hidden_size / 2, 5, padding='same')
+        im_psf = common_layers.layer_norm(im_psf, name="psf_embed")
+        x = tf.concat([x, im_psf], axis=-1)
+
       x, encoder_layers = self.encoder(x)
+
     # Bottleneck.
     with tf.variable_scope('encoder_module'):
       b, b_loss = self.bottleneck(x)
+
     xb_loss = 0.0
     b_shape = common_layers.shape_list(b)
     self._cur_bottleneck_tensor = b
@@ -160,14 +186,23 @@ def autoencoder_body(self, features):
   with tf.variable_scope('decoder_module'):
     reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
 
+  # Apply channel-wise convolution with the PSF if requested
+  # TODO: Apply zero-padding to this convolution
+  if hparams.apply_psf and 'psf' in features:
+    reconstr = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(reconstr[:,:,:,0])*features['psf']),axis=-1)
+
   # Losses.
   losses = {
       "bottleneck_extra": b_loss,
       "bottleneck_l2": hparams.bottleneck_l2_factor * xb_loss
   }
 
-  pz = tf.reduce_sum(tf.abs(reconstr - labels)**2, axis=[-1, -2, -3])
-  targets_loss = tf.reduce_mean(pz)
+  loglik = loglikelihood_fn(labels, reconstr, features, hparams)
+  targets_loss = tf.reduce_mean(- loglik)
+
+  tf.summary.scalar("negloglik", targets_loss)
+  tf.summary.scalar("bottleneck_loss", b_loss)
+
   losses["training"] = targets_loss
   logits = tf.reshape(reconstr, labels_shape)
 

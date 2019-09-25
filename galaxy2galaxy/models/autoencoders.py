@@ -58,3 +58,67 @@ class ContinuousAutoencoderResidualDiscrete(autoencoders.AutoencoderResidualDisc
   """Discrete residual autoencoder."""
   def body(self, features):
     return autoencoder_body(self, features)
+
+@registry.register_hparams
+def continuous_autoencoder_basic():
+  """Basic autoencoder model."""
+  hparams = common_hparams.basic_params1()
+  hparams.optimizer = "adam"
+  hparams.learning_rate_constant = 0.0002
+  hparams.learning_rate_warmup_steps = 500
+  hparams.learning_rate_schedule = "constant * linear_warmup"
+  hparams.label_smoothing = 0.0
+  hparams.batch_size = 128
+  hparams.hidden_size = 64
+  hparams.num_hidden_layers = 5
+  hparams.initializer = "uniform_unit_scaling"
+  hparams.initializer_gain = 1.0
+  hparams.weight_decay = 0.0
+  hparams.kernel_height = 4
+  hparams.kernel_width = 4
+  hparams.dropout = 0.05
+  hparams.add_hparam("max_hidden_size", 1024)
+  hparams.add_hparam("bottleneck_bits", 128)
+  hparams.add_hparam("bottleneck_shared_bits", 0)
+  hparams.add_hparam("bottleneck_shared_bits_start_warmup", 0)
+  hparams.add_hparam("bottleneck_shared_bits_stop_warmup", 0)
+  hparams.add_hparam("bottleneck_noise", 0.1)
+  hparams.add_hparam("bottleneck_warmup_steps", 2000)
+  hparams.add_hparam("sample_height", 32)
+  hparams.add_hparam("sample_width", 32)
+  hparams.add_hparam("bottleneck_l2_factor", 0.05)
+  hparams.add_hparam("gumbel_temperature", 0.5)
+  hparams.add_hparam("gumbel_noise_factor", 0.5)
+  hparams.add_hparam("vq_temperature", 0.001)
+
+  # hparams related to the PSF
+  hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+  hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
+
+  # hparams related to the likelihood
+  hparams.add_hparam("likelihood_type", 'Pixel') # Pixel or Fourier
+  hparams.add_hparam("noise_rms", 1.0) # Value of noise RMS, used for diagonal likelihood
+  return hparams
+
+@registry.register_hparams
+def continuous_autoencoder_residual():
+  """Residual autoencoder model."""
+  hparams = continuous_autoencoder_basic()
+  hparams.optimizer = "Adafactor"
+  hparams.clip_grad_norm = 1.0
+  hparams.learning_rate_constant = 0.5
+  hparams.learning_rate_warmup_steps = 500
+  hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
+  hparams.num_hidden_layers = 5
+  hparams.hidden_size = 64
+  hparams.max_hidden_size = 1024
+  hparams.add_hparam("num_residual_layers", 2)
+  hparams.add_hparam("residual_kernel_height", 3)
+  hparams.add_hparam("residual_kernel_width", 3)
+  hparams.add_hparam("residual_filter_multiplier", 2.0)
+  hparams.add_hparam("residual_dropout", 0.2)
+  hparams.add_hparam("residual_use_separable_conv", int(True))
+
+  # Weight factor for the KL term of the VAE
+  hparams.add_hparam("kl_beta", 1.0)
+  return hparams
