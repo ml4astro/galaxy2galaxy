@@ -90,13 +90,15 @@ def continuous_autoencoder_basic():
   hparams.add_hparam("gumbel_temperature", 0.5)
   hparams.add_hparam("gumbel_noise_factor", 0.5)
   hparams.add_hparam("vq_temperature", 0.001)
+  hparams.add_hparam("gan_loss_factor", 0.0)
 
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
   hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
+  hparams.add_hparam("psf_convolution_pad_factor", 1.5)  # Zero padding factor for convolution
 
   # hparams related to the likelihood
-  hparams.add_hparam("likelihood_type", 'Pixel') # Pixel or Fourier
+  hparams.add_hparam("likelihood_type", "Fourier") # Pixel or Fourier
   hparams.add_hparam("noise_rms", 1.0) # Value of noise RMS, used for diagonal likelihood
   return hparams
 

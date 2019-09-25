@@ -106,3 +106,6 @@ venv.bak/
 data/
 training/
 modules/
+modules_random/
+notebooks/
+notes.txt

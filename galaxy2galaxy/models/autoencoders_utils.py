@@ -119,20 +119,33 @@ def autoencoder_body(self, features):
 
     # Run encoder.
     with tf.variable_scope('encoder_module'):
-      # If we have access to the PSF, we add this information to the encoder
-      if hparams.encode_psf and 'psf' in features:
-        im_psf = tf.expand_dims(tf.roll(tf.spectral.irfft2d(features['psf']),
-                                        shift=[shape[1]//2,shape[2]//2],
-                                        axis=[1,2]), axis=-1)
-        im_psf = tf.layers.conv2d(im_psf, hidden_size / 2, 5, padding='same')
-        im_psf = common_layers.layer_norm(im_psf, name="psf_embed")
-        x = tf.concat([x, im_psf], axis=-1)
-
       x, encoder_layers = self.encoder(x)
 
     # Bottleneck.
     with tf.variable_scope('encoder_module'):
-      b, b_loss = self.bottleneck(x)
+      # If we have access to the PSF, we add this information to the encoder
+      if hparams.encode_psf and 'psf' in features:
+        net_psf = tf.layers.conv2d(features['psf'], hparams.hidden_size, 5,
+                                   padding='same', name="psf_embed_1")
+        net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
+        kernel, strides = self._get_kernel_and_strides()
+        for i in range(hparams.num_hidden_layers):
+          net_psf = self.make_even_size(net_psf)
+          net_psf = tf.layers.conv2d(
+              net_psf,
+              hparams.hidden_size * 2**(i + 1),
+              kernel,
+              strides=strides,
+              padding="SAME",
+              activation=common_layers.belu,
+              name="conv_psf_%d" % i)
+          net_psf = common_layers.layer_norm(net_psf, name="psf_ln_%d" % i)
+          # net_psf = tf.layers.average_pooling2d(net_psf,
+          #                                       pool_size=common_layers.shape_list(net_psf)[1:3],
+          #                                       strides=common_layers.shape_list(net_psf)[1:3])
+        b, b_loss = self.bottleneck(tf.concat([x, net_psf], axis=-1))
+      else:
+        b, b_loss = self.bottleneck(x)
 
     xb_loss = 0.0
     b_shape = common_layers.shape_list(b)
@@ -187,9 +200,18 @@ def autoencoder_body(self, features):
     reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
 
   # Apply channel-wise convolution with the PSF if requested
-  # TODO: Apply zero-padding to this convolution
+  # TODO: Handle multiple bands
   if hparams.apply_psf and 'psf' in features:
-    reconstr = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(reconstr[:,:,:,0])*features['psf']),axis=-1)
+    if self.num_channels > 1:
+      raise NotImplementedError
+    rec_padded = tf.pad(reconstr[:,:,:,0], [[0,0],
+                                            [0, int(hparams.psf_convolution_pad_factor*shape[1])],
+                                            [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
+    psf_padded = tf.pad(features['psf'][...,0], [[0,0],
+                                            [0, int(hparams.psf_convolution_pad_factor*shape[1])],
+                                            [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
+    reconstr = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
+    reconstr = reconstr[:, :shape[1], :shape[2], :]
 
   # Losses.
   losses = {
