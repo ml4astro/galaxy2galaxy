@@ -34,16 +34,16 @@ from galaxy2galaxy.layers.image_utils import pack_images
 
 def loglikelihood_fn(xin, yin, features, hparams):
   if hparams.likelihood_type == 'Fourier':
-    x = tf.spectral.rfft2d(xin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.)
-    y = tf.spectral.rfft2d(yin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.)
-
     # Compute FFT normalization factor
     size = xin.get_shape().as_list()[1]
+    x = tf.spectral.rfft2d(xin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.) / size**2 * (2*pi)**2
+    y = tf.spectral.rfft2d(yin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.) / size**2 * (2*pi)**2
+
     pz = tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2]) / size**2
     return -pz
   elif hparams.likelihood_type == 'Pixel':
     # TODO: include per example noise std
-    pz = tf.reduce_sum(tf.abs(xin[:,:,:,0] - y)**2, axis=[-1, -2]) / hparams.noise_rms**2
+    pz = tf.reduce_sum(tf.abs(xin[:,:,:,0] - yin)**2, axis=[-1, -2]) / hparams.noise_rms**2
     return -pz
   else:
     raise NotImplementedError
