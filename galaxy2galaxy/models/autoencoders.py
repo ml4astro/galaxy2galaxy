@@ -114,6 +114,8 @@ def continuous_autoencoder_residual():
   hparams.num_hidden_layers = 5
   hparams.hidden_size = 64
   hparams.max_hidden_size = 1024
+
+  hparams.add_hparam("autoregressive_decode_steps", 0)
   hparams.add_hparam("num_residual_layers", 2)
   hparams.add_hparam("residual_kernel_height", 3)
   hparams.add_hparam("residual_kernel_width", 3)
