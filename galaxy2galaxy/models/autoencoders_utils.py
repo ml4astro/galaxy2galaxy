@@ -44,7 +44,7 @@ def loglikelihood_fn(xin, yin, features, hparams):
     return -pz
   elif hparams.likelihood_type == 'Pixel':
     # TODO: include per example noise std
-    pz = 0.5 * tf.reduce_sum(tf.abs(xin[:,:,:,0] - yin)**2, axis=[-1, -2]) / hparams.noise_rms**2
+    pz = 0.5 * tf.reduce_sum(tf.abs(xin[:,:,:,0] - yin[...,0])**2, axis=[-1, -2]) / hparams.noise_rms**2
     return -pz
   else:
     raise NotImplementedError
