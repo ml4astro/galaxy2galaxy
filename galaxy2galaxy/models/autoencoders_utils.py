@@ -108,7 +108,7 @@ def autoencoder_body(self, features):
     hub.register_module_for_export(encoder, "encoder")
 
     if hparams.encode_psf:
-      code = encoder({'inputs':features["inputs"], 'psf': features['psf']})
+      code = encoder({'input':features["inputs"], 'psf': features['psf']})
     else:
       code = encoder(features["inputs"])
     b_shape = [None, ] + common_layers.shape_list(code)[1:]
