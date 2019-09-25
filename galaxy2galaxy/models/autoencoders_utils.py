@@ -87,19 +87,18 @@ def autoencoder_body(self, features):
       x = self.embed(tf.expand_dims(input_layer, -1))
       x, encoder_layers = self.encoder(x)
       net_psf = tf.layers.conv2d(psf_layer, hparams.hidden_size, 5,
-                               padding='same', name="psf_embed_1")
+      padding='same', name="psf_embed_1")
       net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
       kernel, strides = self._get_kernel_and_strides()
       for i in range(hparams.num_hidden_layers):
         net_psf = self.make_even_size(net_psf)
-        net_psf = tf.layers.conv2d(
-          net_psf,
-          hparams.hidden_size * 2**(i + 1),
-          kernel,
-          strides=strides,
-          padding="SAME",
-          activation=common_layers.belu,
-          name="conv_psf_%d" % i)
+        net_psf = tf.layers.conv2d( net_psf,
+                  hparams.hidden_size * 2**(i + 1),
+                  kernel,
+                  strides=strides,
+                  padding="SAME",
+                  activation=common_layers.belu,
+                  name="conv_psf_%d" % i)
         net_psf = common_layers.layer_norm(net_psf, name="psf_ln_%d" % i)
       b, b_loss = self.bottleneck(tf.concat([x, net_psf], axis=-1))
       hub.add_signature(inputs={'input':input_layer, 'psf':psf_layer}, outputs=b)
