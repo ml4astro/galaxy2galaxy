@@ -28,17 +28,65 @@ from tensor2tensor.layers import modalities
 from tensor2tensor.utils import t2t_model
 
 import tensorflow as tf
+import tensorflow_hub as hub
+
+from galaxy2galaxy.layers.image_utils import pack_images
+
+def image_summary(name, image_logits, max_outputs=1, rows=8, cols=8):
+  """Helper for image summaries that are safe on TPU."""
+  if len(image_logits.get_shape()) != 4:
+    tf.logging.info("Not generating image summary, maybe not an image.")
+    return
+  return tf.summary.image(name, pack_images(image_logits, rows, cols),
+      max_outputs=max_outputs)
 
 def autoencoder_body(self, features):
   """ Customized body function for autoencoders acting on continuous images.
   This is based on tensor2tensor.models.research.AutoencoderBasic.body
   and should be compatible with most derived classes.
+
+  The original autoencoder class relies on embedding the channels to a discrete
+  vocabulary and defines the loss on that vocab. It's cool and all, but here we
+  prefer expressing the reconstruction loss as an actual continuous likelihood
+  function.
   """
   hparams = self.hparams
   is_training = hparams.mode == tf.estimator.ModeKeys.TRAIN
-  vocab_size = 64#self._problem_hparams.vocab_size["targets"]
-  if hasattr(self._hparams, "vocab_divisor"):
-    vocab_size += (-vocab_size) % self._hparams.vocab_divisor
+
+  if hparams.mode == tf.estimator.ModeKeys.PREDICT:
+    # In predict mode, we also define TensorFlow Hub modules for all pieces of
+    # the autoencoder
+    input_shape =  [None, ] + common_layers.shape_list(features["inputs"])[1:]
+    # First build encoder spec
+    def make_model_spec():
+      input_layer = tf.placeholder(tf.float32, shape=input_shape)
+      x = self.embed(tf.expand_dims(input_layer, -1))
+      x, encoder_layers = self.encoder(x)
+      b, b_loss = self.bottleneck(x)
+      hub.add_signature(inputs=input_layer, outputs=b)
+    spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
+    encoder = hub.Module(spec, name="encoder_module")
+    hub.register_module_for_export(encoder, "encoder")
+
+    code = encoder(features["inputs"])
+    b_shape = [None, ] + common_layers.shape_list(code)[1:]
+    res_size = self.hparams.hidden_size * 2**self.hparams.num_hidden_layers
+    res_size = min(res_size, hparams.max_hidden_size)
+
+    # Second build decoder spec
+    def make_model_spec():
+      input_layer = tf.placeholder(tf.float32, shape=b_shape)
+      x = self.unbottleneck(input_layer, res_size)
+      x = self.decoder(x, None)
+      reconstr = tf.layers.dense(x, self.num_channels, name="autoencoder_final")
+      hub.add_signature(inputs=input_layer, outputs=reconstr)
+    spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
+    decoder = hub.Module(spec, name="decoder_module")
+    hub.register_module_for_export(decoder, "decoder")
+
+    reconstr = decoder(code)
+    return reconstr , {"bottleneck_loss": 0.0}
+
   encoder_layers = None
   self.is1d = hparams.sample_width == 1
   if (hparams.mode != tf.estimator.ModeKeys.PREDICT
@@ -49,19 +97,23 @@ def autoencoder_body(self, features):
     if len(labels.shape) == 5:
       labels = time_to_channels(labels)
     shape = common_layers.shape_list(labels)
-    x = self.embed(tf.expand_dims(labels, -1))
+    with tf.variable_scope('encoder_module'):
+      x = self.embed(tf.expand_dims(labels, -1))
     target_codes = x
     if shape[2] == 1:
       self.is1d = True
     # Run encoder.
-    x, encoder_layers = self.encoder(x)
+    with tf.variable_scope('encoder_module'):
+      x, encoder_layers = self.encoder(x)
     # Bottleneck.
-    b, b_loss = self.bottleneck(x)
+    with tf.variable_scope('encoder_module'):
+      b, b_loss = self.bottleneck(x)
     xb_loss = 0.0
     b_shape = common_layers.shape_list(b)
     self._cur_bottleneck_tensor = b
     res_size = common_layers.shape_list(x)[-1]
-    b = self.unbottleneck(b, res_size)
+    with tf.variable_scope('decoder_module'):
+      b = self.unbottleneck(b, res_size)
     if not is_training:
       x = b
     else:
@@ -84,13 +136,6 @@ def autoencoder_body(self, features):
       xb_clip = tf.maximum(tf.stop_gradient(xb_loss), clip_max)
       xb_loss *= clip_max / xb_clip
       x = tf.where(tf.less(rand, nomix_p), b, x)
-    if hparams.gan_loss_factor != 0.0:
-      # Add a purely sampled batch on which we'll compute the GAN loss.
-      g = self.unbottleneck(
-          self.sample(shape=b_shape),
-          common_layers.shape_list(x)[-1],
-          reuse=True)
-      x = tf.concat([x, g], axis=0)
   else:
     if self._cur_bottleneck_tensor is None:
       b = self.sample()
@@ -99,30 +144,21 @@ def autoencoder_body(self, features):
     self._cur_bottleneck_tensor = b
     res_size = self.hparams.hidden_size * 2**self.hparams.num_hidden_layers
     res_size = min(res_size, hparams.max_hidden_size)
-    x = self.unbottleneck(b, res_size)
+
+    with tf.variable_scope('decoder_module'):
+      x = self.unbottleneck(b, res_size)
+
   # Run decoder.
-  x = self.decoder(x, encoder_layers)
+  with tf.variable_scope('decoder_module'):
+    x = self.decoder(x, encoder_layers)
 
   # Cut to the right size and mix before returning.
   res = x
   if hparams.mode != tf.estimator.ModeKeys.PREDICT:
     res = x[:, :shape[1], :shape[2], :]
 
-  # Final dense layer.
-  res = tf.layers.dense(
-      res, self.num_channels * hparams.hidden_size, name="res_dense")
-
-  output_shape = common_layers.shape_list(res)[:-1] + [
-      self.num_channels, self.hparams.hidden_size
-  ]
-  res = tf.reshape(res, output_shape)
-
-  if hparams.mode == tf.estimator.ModeKeys.PREDICT:
-    reconstr = tf.layers.dense(res, vocab_size, name="autoencoder_final")
-    return reconstr, {"bottleneck_loss": 0.0}
-
-  if hparams.gan_loss_factor != 0.0:
-    res, res_gan = tf.split(res, 2, axis=0)
+  with tf.variable_scope('decoder_module'):
+    reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
 
   # Losses.
   losses = {
@@ -130,73 +166,12 @@ def autoencoder_body(self, features):
       "bottleneck_l2": hparams.bottleneck_l2_factor * xb_loss
   }
 
-  reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
-  reconstr = tf.reshape(reconstr, labels_shape)
-
   pz = tf.reduce_sum(tf.abs(reconstr - labels)**2, axis=[-1, -2, -3])
   targets_loss = tf.reduce_mean(pz)
   losses["training"] = targets_loss
   logits = tf.reshape(reconstr, labels_shape)
 
-  # GAN losses.
-  if hparams.gan_loss_factor != 0.0:
-    update_means_factor = common_layers.inverse_exp_decay(
-        hparams.gan_codes_warmup_steps, min_value=0.0001)
-
-    reconstr_gan = tf.layers.dense(
-        res_gan, vocab_size, name="autoencoder_final", reuse=True)
-    reconstr_gan_nonoise = reconstr_gan
-    reconstr_gan = self.gumbel_sample(reconstr_gan)
-    # Embed to codes.
-    gan_codes = self.embed(reconstr_gan)
-
-  # Add GAN loss if requested.
-  gan_loss = 0.0
-  if hparams.gan_loss_factor != 0.0:
-    self.image_summary("gan", reconstr_gan_nonoise)
-
-    def discriminate(x):
-      """Run a dioscriminator depending on the hparams."""
-      if hparams.discriminator == "default":
-        return common_layers.deep_discriminator(
-            x, hparams.discriminator_batchnorm, is_training)
-      elif hparams.discriminator == "patched":
-        return common_layers.patch_discriminator(x)
-      elif hparams.discriminator == "single":
-        return common_layers.single_discriminator(
-            x,
-            hparams.discriminator_size,
-            hparams.discriminator_kernel_size,
-            hparams.discriminator_strides,
-            pure_mean=hparams.discriminator_pure_mean)
-      elif hparams.discriminator == "double":
-        return common_layers.double_discriminator(
-            x,
-            hparams.discriminator_size,
-            hparams.discriminator_kernel_size,
-            hparams.discriminator_strides,
-            pure_mean=hparams.discriminator_pure_mean)
-      else:
-        raise Exception("Unknown discriminator %s" % hparams.discriminator)
-
-    tc_shape = common_layers.shape_list(target_codes)
-    if len(tc_shape) > 4:
-      target_codes = tf.reshape(target_codes,
-                                tc_shape[:-2] + [tc_shape[-1] * tc_shape[-2]])
-      gan_codes = tf.reshape(gan_codes,
-                             tc_shape[:-2] + [tc_shape[-1] * tc_shape[-2]])
-    gan_lr = common_layers.inverse_exp_decay(
-        hparams.gan_codes_warmup_steps * 1.5)
-    rev_grad_gan_codes = reverse_gradient(gan_codes, lr=gan_lr)
-    gan_loss = common_layers.sliced_gan_loss(
-        target_codes,
-        rev_grad_gan_codes,
-        discriminate,
-        self.hparams.num_sliced_vecs,
-        do_tanh=hparams.sliced_do_tanh)
-    gan_loss *= hparams.gan_loss_factor * update_means_factor
-    losses["gan_loss"] = -gan_loss
-
-  self.image_summary("ae", reconstr)
+  image_summary("ae", reconstr)
+  image_summary("input", labels)
 
   return logits, losses

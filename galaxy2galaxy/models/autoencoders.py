@@ -39,22 +39,22 @@ class ContinuousAutoencoderBasic(autoencoders.AutoencoderBasic):
     return autoencoder_body(self, features)
 
 @registry.register_model
-class ContinuousAutoencoderResidual(ContinuousAutoencoderBasic):
+class ContinuousAutoencoderResidual(autoencoders.AutoencoderResidual):
   def body(self, features):
     return autoencoder_body(self, features)
 
 @registry.register_model
-class ContinuousAutoencoderResidualVAE(ContinuousAutoencoderResidual):
+class ContinuousAutoencoderResidualVAE(autoencoders.AutoencoderResidualVAE):
   def body(self, features):
     return autoencoder_body(self, features)
 
 @registry.register_model
-class ContinuousAutoencoderBasicDiscrete(ContinuousAutoencoderBasic):
+class ContinuousAutoencoderBasicDiscrete(autoencoders.AutoencoderBasicDiscrete):
   def body(self, features):
     return autoencoder_body(self, features)
 
 @registry.register_model
-class ContinuousAutoencoderResidualDiscrete(ContinuousAutoencoderResidual):
+class ContinuousAutoencoderResidualDiscrete(autoencoders.AutoencoderResidualDiscrete):
   """Discrete residual autoencoder."""
   def body(self, features):
     return autoencoder_body(self, features)
