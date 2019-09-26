@@ -20,7 +20,7 @@ from galaxy2galaxy.utils import registry
 import tensorflow as tf
 import galsim
 
-# Path to sql files for HSC samples
+# Path to data files required for cosmos
 _COSMOS_DATA_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 
 @registry.register_problem
