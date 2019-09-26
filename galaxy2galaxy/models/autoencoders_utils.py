@@ -49,7 +49,7 @@ def loglikelihood_fn(xin, yin, features, hparams):
   else:
     raise NotImplementedError
 
-def image_summary(name, image_logits, max_outputs=1, rows=8, cols=8):
+def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4):
   """Helper for image summaries that are safe on TPU."""
   if len(image_logits.get_shape()) != 4:
     tf.logging.info("Not generating image summary, maybe not an image.")
