@@ -77,6 +77,9 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
 
         "psf/encoded": tf.FixedLenFeature((), tf.string),
         "psf/format": tf.FixedLenFeature((), tf.string),
+
+        "ps/encoded": tf.FixedLenFeature((), tf.string),
+        "ps/format": tf.FixedLenFeature((), tf.string),
     }
 
 
@@ -98,6 +101,13 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 format_key="psf/format",
                 channels=self.num_bands,
                 shape=[p.img_len, p.img_len, self.num_bands],
+                dtype=tf.float32),
+
+        "ps": tf.contrib.slim.tfexample_decoder.Image(
+                image_key="ps/encoded",
+                format_key="ps/format",
+                channels=self.num_bands,
+                shape=[p.img_len, p.img_len // 2 + 1],
                 dtype=tf.float32),
     }
 
