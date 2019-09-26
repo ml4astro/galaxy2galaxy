@@ -93,12 +93,12 @@ def continuous_autoencoder_basic():
   hparams.add_hparam("gan_loss_factor", 0.0)
 
   # hparams related to the PSF
-  hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+  hparams.add_hparam("encode_psf", False) # Should we use the PSF at the encoder
   hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
-  hparams.add_hparam("psf_convolution_pad_factor", 1.5)  # Zero padding factor for convolution
+  hparams.add_hparam("psf_convolution_pad_factor", 2.)  # Zero padding factor for convolution
 
   # hparams related to output activation
-  hparams.add_hparam("output_activation", 'softplus') # either none or softplus
+  hparams.add_hparam("output_activation", 'none') # either none or softplus
 
   # hparams related to the likelihood
   hparams.add_hparam("likelihood_type", "Fourier") # Pixel or Fourier
