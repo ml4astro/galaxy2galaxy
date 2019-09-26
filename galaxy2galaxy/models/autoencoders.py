@@ -102,7 +102,7 @@ def continuous_autoencoder_basic():
 
   # hparams related to the likelihood
   hparams.add_hparam("likelihood_type", "Fourier") # Pixel or Fourier
-  hparams.add_hparam("noise_rms", 0.01) # Value of noise RMS, used for diagonal likelihood
+  hparams.add_hparam("noise_rms", 0.03) # Value of noise RMS, used for diagonal likelihood
   return hparams
 
 @registry.register_hparams
