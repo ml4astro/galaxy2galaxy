@@ -4,6 +4,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
+
 from . import galsim_utils
 from . import astroimage_utils
 
@@ -18,6 +20,8 @@ from galaxy2galaxy.utils import registry
 import tensorflow as tf
 import galsim
 
+# Path to data files required for cosmos
+_COSMOS_DATA_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
 
 @registry.register_problem
 class Img2imgCosmos(galsim_utils.GalsimProblem):
@@ -50,6 +54,8 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
                     "targets": None}
+    p.add_hparam("psf", None)
+    p.add_hparam("rotation", False)
 
   @property
   def num_bands(self):
@@ -94,8 +100,18 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
       # Draw a galaxy using GalSim, any kind of operation can be done here
       gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
 
-      # We apply the orginal psf
-      psf = gal.original_psf
+      # We apply the orginal psf if a different PSF is not requested
+      if p.psf is None:
+          psf = gal.original_psf
+      else:
+          psf = p.psf
+
+      # Apply random rotation if requested
+      if p.rotation:
+        rotation_angle = galsim.Angle(-np.random.rand()* 2 * np.pi,
+                                      galsim.radians)
+        gal = gal.rotate(rotation_angle)
+        psf = psf.rotate(rotation_angle)
 
       # We save the corresponding attributes for this galaxy
       if hasattr(p, 'attributes'):
@@ -118,7 +134,7 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     image = example["inputs"]
 
     # Clip to 1 the values of the image
-    image = tf.clip_by_value(image, -1, 1)
+    # image = tf.clip_by_value(image, -1, 1)
 
     # Aggregate the conditions
     if hasattr(p, 'attributes'):
@@ -127,6 +143,44 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     example["inputs"] = image
     example["targets"] = image
     return example
+
+
+@registry.register_problem
+class Img2imgCosmosHSC(Img2imgCosmos):
+  """ COSMOS dataset at HSC resolution and uniform PSF
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.168
+    p.img_len = 64
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "targets": None}
+    p.psf = galsim.InterpolatedImage(os.path.join(_COSMOS_DATA_DIR, 'hst_cosmos_effective_psf.fits'), scale=0.03)
+    p.rotation = True
+
+  def preprocess_example(self, example, unused_mode, unused_hparams):
+    """ Preprocess the examples, can be used for further augmentation or
+    image standardization.
+    """
+    p = self.get_hparams()
+    image = example["inputs"]
+
+    # Apply random augmentation
+    image = tf.image.random_flip_up_down(image)
+    image = tf.image.random_flip_left_right(image)
+
+    # Aggregate the conditions
+    if hasattr(p, 'attributes'):
+      example['attributes'] = tf.stack([example[k] for k in p.attributes])
+
+    example["inputs"] = image
+    example["targets"] = image
+    return example
+
 
 @registry.register_problem
 class Attrs2imgCosmos(Img2imgCosmos):

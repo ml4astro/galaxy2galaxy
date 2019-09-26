@@ -17,7 +17,7 @@ setup(
     url='http://github.com/ml4astro/galaxy2galaxy',
     license='MIT',
     packages=find_packages(),
-    package_data={'': ['*.sql'],},
+    package_data={'': ['*.sql', '*.fits'],},
     scripts=[
         'galaxy2galaxy/bin/g2g-trainer',
         'galaxy2galaxy/bin/g2g-datagen',

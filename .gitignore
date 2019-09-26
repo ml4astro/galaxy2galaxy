@@ -103,9 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-data/
+
 training/
 modules/
-modules_random/
-notebooks/
-notes.txt
