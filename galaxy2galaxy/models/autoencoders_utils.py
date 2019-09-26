@@ -70,6 +70,8 @@ def autoencoder_body(self, features):
   hparams = self.hparams
   is_training = hparams.mode == tf.estimator.ModeKeys.TRAIN
 
+  output_activation = tf.nn.softplus if hparams.output_activation == 'softplus' else None
+
   if hparams.mode == tf.estimator.ModeKeys.PREDICT:
     # In predict mode, we also define TensorFlow Hub modules for all pieces of
     # the autoencoder
@@ -121,7 +123,8 @@ def autoencoder_body(self, features):
       input_layer = tf.placeholder(tf.float32, shape=b_shape)
       x = self.unbottleneck(input_layer, res_size)
       x = self.decoder(x, None)
-      reconstr = tf.layers.dense(x, self.num_channels, name="autoencoder_final")
+      reconstr = tf.layers.dense(x, self.num_channels, name="autoencoder_final",
+                                 activation=output_activation)
       hub.add_signature(inputs=input_layer, outputs=reconstr)
     spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
     decoder = hub.Module(spec, name="decoder_module")
@@ -224,7 +227,8 @@ def autoencoder_body(self, features):
     res = x[:, :shape[1], :shape[2], :]
 
   with tf.variable_scope('decoder_module'):
-    reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final")
+    reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final",
+                               activation=output_activation)
 
   # Apply channel-wise convolution with the PSF if requested
   # TODO: Handle multiple bands

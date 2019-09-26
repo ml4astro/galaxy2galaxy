@@ -97,6 +97,9 @@ def continuous_autoencoder_basic():
   hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
   hparams.add_hparam("psf_convolution_pad_factor", 1.5)  # Zero padding factor for convolution
 
+  # hparams related to output activation
+  hparams.add_hparam("output_activation", 'softplus') # either none or softplus
+
   # hparams related to the likelihood
   hparams.add_hparam("likelihood_type", "Fourier") # Pixel or Fourier
   hparams.add_hparam("noise_rms", 0.01) # Value of noise RMS, used for diagonal likelihood
