@@ -88,22 +88,17 @@ def autoencoder_body(self, features):
       input_layer = tf.placeholder(tf.float32, shape=input_shape)
       psf_layer = tf.placeholder(tf.float32, shape=input_shape)
       x = self.embed(tf.expand_dims(input_layer, -1))
-      x, encoder_layers = self.encoder(x)
-      net_psf = tf.layers.conv2d(psf_layer, hparams.hidden_size, 5,
-      padding='same', name="psf_embed_1")
-      net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
-      kernel, strides = self._get_kernel_and_strides()
-      for i in range(hparams.num_hidden_layers):
-        net_psf = self.make_even_size(net_psf)
-        net_psf = tf.layers.conv2d( net_psf,
-                  hparams.hidden_size * 2**(i + 1),
-                  kernel,
-                  strides=strides,
-                  padding="SAME",
-                  activation=common_layers.belu,
-                  name="conv_psf_%d" % i)
-        net_psf = common_layers.layer_norm(net_psf, name="psf_ln_%d" % i)
-      b, b_loss = self.bottleneck(tf.concat([x, net_psf], axis=-1))
+
+      # If we have access to the PSF, we add this information to the encoder
+      if hparams.encode_psf and 'psf' in features:
+        net_psf = tf.layers.conv2d(psf_layer,
+                                   hparams.hidden_size // 4, 5,
+                                   padding='same', name="psf_embed_1")
+        net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
+        x, encoder_layers = self.encoder(tf.concat([x, net_psf], axis=-1))
+      else:
+        x, encoder_layers = self.encoder(x)
+      b, b_loss = self.bottleneck(x)
       hub.add_signature(inputs={'input':input_layer, 'psf':psf_layer}, outputs=b)
 
     spec = hub.create_module_spec(make_model_spec_psf if hparams.encode_psf else make_model_spec, drop_collections=['checkpoints'])
@@ -149,33 +144,19 @@ def autoencoder_body(self, features):
 
     # Run encoder.
     with tf.variable_scope('encoder_module'):
-      x, encoder_layers = self.encoder(x)
+      # If we have access to the PSF, we add this information to the encoder
+      if hparams.encode_psf and 'psf' in features:
+        net_psf = tf.layers.conv2d(features['psf'],
+                                   hparams.hidden_size // 4, 5,
+                                   padding='same', name="psf_embed_1")
+        net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
+        x, encoder_layers = self.encoder(tf.concat([x, net_psf], axis=-1))
+      else:
+        x, encoder_layers = self.encoder(x)
 
     # Bottleneck.
     with tf.variable_scope('encoder_module'):
-      # If we have access to the PSF, we add this information to the encoder
-      if hparams.encode_psf and 'psf' in features:
-        net_psf = tf.layers.conv2d(features['psf'], hparams.hidden_size, 5,
-                                   padding='same', name="psf_embed_1")
-        net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
-        kernel, strides = self._get_kernel_and_strides()
-        for i in range(hparams.num_hidden_layers):
-          net_psf = self.make_even_size(net_psf)
-          net_psf = tf.layers.conv2d(
-              net_psf,
-              hparams.hidden_size * 2**(i + 1),
-              kernel,
-              strides=strides,
-              padding="SAME",
-              activation=common_layers.belu,
-              name="conv_psf_%d" % i)
-          net_psf = common_layers.layer_norm(net_psf, name="psf_ln_%d" % i)
-          # net_psf = tf.layers.average_pooling2d(net_psf,
-          #                                       pool_size=common_layers.shape_list(net_psf)[1:3],
-          #                                       strides=common_layers.shape_list(net_psf)[1:3])
-        b, b_loss = self.bottleneck(tf.concat([x, net_psf], axis=-1))
-      else:
-        b, b_loss = self.bottleneck(x)
+      b, b_loss = self.bottleneck(x)
 
     xb_loss = 0.0
     b_shape = common_layers.shape_list(b)

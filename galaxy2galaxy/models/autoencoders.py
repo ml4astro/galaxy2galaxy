@@ -19,7 +19,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from tensor2tensor.layers import common_attention
 from tensor2tensor.layers import common_hparams
 from tensor2tensor.layers import common_layers
 from tensor2tensor.layers import discretization
@@ -45,6 +44,118 @@ class ContinuousAutoencoderResidual(autoencoders.AutoencoderResidual):
 
 @registry.register_model
 class ContinuousAutoencoderResidualVAE(autoencoders.AutoencoderResidualVAE):
+
+  def encoder(self, x):
+    with tf.variable_scope("encoder"):
+      hparams = self.hparams
+      layers = []
+      kernel, strides = self._get_kernel_and_strides()
+      residual_kernel = (hparams.residual_kernel_height,
+                         hparams.residual_kernel_width)
+      residual_kernel1d = (hparams.residual_kernel_height, 1)
+      residual_kernel = residual_kernel1d if self.is1d else residual_kernel
+      residual_conv = tf.layers.conv2d
+      if hparams.residual_use_separable_conv:
+        residual_conv = tf.layers.separable_conv2d
+      # Down-convolutions.
+      for i in range(hparams.num_hidden_layers):
+        with tf.variable_scope("layer_%d" % i):
+          x = self.make_even_size(x)
+          layers.append(x)
+          x = self.dropout(x)
+          filters = hparams.hidden_size * 2**(i + 1)
+          filters = min(filters, hparams.max_hidden_size)
+
+          x = tf.layers.conv2d(
+              x,
+              filters,
+              kernel,
+              strides=strides,
+              padding="SAME",
+              activation=common_layers.belu,
+              name="strided")
+          y = x
+          y = tf.nn.dropout(y, 1.0 - hparams.residual_dropout)
+          for r in range(hparams.num_residual_layers):
+            residual_filters = filters
+            if r < hparams.num_residual_layers - 1:
+              residual_filters = int(
+                  filters * hparams.residual_filter_multiplier)
+            y = residual_conv(
+                y,
+                residual_filters,
+                residual_kernel,
+                padding="SAME",
+                activation=common_layers.belu,
+                name="residual_%d" % r)
+          x += y
+          x = common_layers.layer_norm(x, name="ln")
+      return x, layers
+
+  def decoder(self, x, encoder_layers=None):
+    with tf.variable_scope("decoder"):
+      hparams = self.hparams
+      is_training = self.hparams.mode == tf.estimator.ModeKeys.TRAIN
+      kernel, strides = self._get_kernel_and_strides()
+      residual_kernel = (hparams.residual_kernel_height,
+                         hparams.residual_kernel_width)
+      residual_kernel1d = (hparams.residual_kernel_height, 1)
+      residual_kernel = residual_kernel1d if self.is1d else residual_kernel
+      residual_conv = tf.layers.conv2d
+      if hparams.residual_use_separable_conv:
+        residual_conv = tf.layers.separable_conv2d
+      # Up-convolutions.
+      for i in range(hparams.num_hidden_layers):
+        j = hparams.num_hidden_layers - i - 1
+        if is_training:
+          nomix_p = common_layers.inverse_lin_decay(
+              int(hparams.bottleneck_warmup_steps * 0.25 * 2**j)) + 0.01
+          if common_layers.should_generate_summaries():
+            tf.summary.scalar("nomix_p_%d" % j, nomix_p)
+        filters = hparams.hidden_size * 2**j
+        filters = min(filters, hparams.max_hidden_size)
+        with tf.variable_scope("layer_%d" % i):
+          j = hparams.num_hidden_layers - i - 1
+          x = tf.layers.conv2d_transpose(
+              x,
+              filters,
+              kernel,
+              strides=strides,
+              padding="SAME",
+              activation=common_layers.belu,
+              name="strided")
+          y = x
+          for r in range(hparams.num_residual_layers):
+            residual_filters = filters
+            if r < hparams.num_residual_layers - 1:
+              residual_filters = int(
+                  filters * hparams.residual_filter_multiplier)
+            y = residual_conv(
+                y,
+                residual_filters,
+                residual_kernel,
+                padding="SAME",
+                activation=common_layers.belu,
+                name="residual_%d" % r)
+          x += tf.nn.dropout(y, 1.0 - hparams.residual_dropout)
+          x = common_layers.layer_norm(x, name="ln")
+
+          if encoder_layers is not None:
+            enc_x = encoder_layers[j]
+
+            enc_shape = common_layers.shape_list(x)
+            x_mix_enc = enc_x[:enc_shape[0], :enc_shape[1], :enc_shape[2], :enc_shape[3]]
+            x_mix = x
+            if is_training:  # Mix at the beginning of training.
+              rand = tf.random_uniform(common_layers.shape_list(x_mix))
+              x_mix = tf.where(tf.less(rand, nomix_p), x_mix, x_mix_enc)
+            if hparams.gan_loss_factor != 0:
+              x_gan = x[enc_shape[0]:, :enc_shape[1], :enc_shape[2], :]
+              x = tf.concat([x_mix, x_gan], axis=0)
+            else:
+              x = x_mix
+      return x
+
   def body(self, features):
     return autoencoder_body(self, features)
 
@@ -93,12 +204,12 @@ def continuous_autoencoder_basic():
   hparams.add_hparam("gan_loss_factor", 0.0)
 
   # hparams related to the PSF
-  hparams.add_hparam("encode_psf", False) # Should we use the PSF at the encoder
+  hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
   hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
-  hparams.add_hparam("psf_convolution_pad_factor", 2.)  # Zero padding factor for convolution
+  hparams.add_hparam("psf_convolution_pad_factor", 0.)  # Zero padding factor for convolution
 
   # hparams related to output activation
-  hparams.add_hparam("output_activation", 'none') # either none or softplus
+  hparams.add_hparam("output_activation", 'softplus') # either none or softplus
 
   # hparams related to the likelihood
   hparams.add_hparam("likelihood_type", "Fourier") # Pixel or Fourier
@@ -107,7 +218,7 @@ def continuous_autoencoder_basic():
 
 @registry.register_hparams
 def continuous_autoencoder_residual():
-  """Residual autoencoder model."""
+  """Residual autoencoder model. This works well for images of size 32x32."""
   hparams = continuous_autoencoder_basic()
   hparams.optimizer = "Adafactor"
   hparams.clip_grad_norm = 1.0
@@ -124,6 +235,35 @@ def continuous_autoencoder_residual():
   hparams.add_hparam("residual_kernel_width", 3)
   hparams.add_hparam("residual_filter_multiplier", 2.0)
   hparams.add_hparam("residual_dropout", 0.2)
+  hparams.add_hparam("residual_use_separable_conv", int(True))
+
+  # Weight factor for the KL term of the VAE
+  hparams.add_hparam("kl_beta", 1.0)
+  return hparams
+
+@registry.register_hparams
+def continuous_autoencoder_residual_128():
+  """Residual autoencoder model. This works well for images of size 128x128."""
+  hparams = continuous_autoencoder_basic()
+  hparams.optimizer = "Adafactor"
+  hparams.clip_grad_norm = 1.0
+  hparams.learning_rate_constant = 0.25
+  hparams.learning_rate_warmup_steps = 500
+  hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
+  hparams.num_hidden_layers = 7
+  hparams.hidden_size = 32
+  hparams.max_hidden_size = 256
+  hparams.batch_size = 16
+  hparams.bottleneck_bits = 64
+
+  hparams.bottleneck_warmup_steps = 5000
+
+  hparams.add_hparam("autoregressive_decode_steps", 0)
+  hparams.add_hparam("num_residual_layers", 2)
+  hparams.add_hparam("residual_kernel_height", 3)
+  hparams.add_hparam("residual_kernel_width", 3)
+  hparams.add_hparam("residual_filter_multiplier", 2.0)
+  hparams.add_hparam("residual_dropout", 0.1)
   hparams.add_hparam("residual_use_separable_conv", int(True))
 
   # Weight factor for the KL term of the VAE
