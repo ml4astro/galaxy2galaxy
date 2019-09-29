@@ -234,6 +234,25 @@ class Img2imgCosmos128(Img2imgCosmos):
                     "targets": None}
 
 @registry.register_problem
+class Attrs2imgCosmos128(Img2imgCosmos128):
+  """ Smaller version of the Img2imgCosmos problem, at half the pixel
+  resolution
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.03
+    p.img_len = 128
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+    p.attributes = ['mag_auto', 'flux_radius', 'zphot']
+
+@registry.register_problem
 class Attrs2imgCosmos32(Attrs2imgCosmos):
   """ Lower resolution equivalent of conditional generation problem.
   """

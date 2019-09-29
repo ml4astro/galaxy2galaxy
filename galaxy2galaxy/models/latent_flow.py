@@ -40,12 +40,24 @@ class LatentFlow(t2t_model.T2TModel):
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
     x = features['inputs']
-    y = features['attributes']
-
+    y = tf.concat([tf.expand_dims(features[k], axis=1) for k in hparams.problem.attributes] ,axis=1)
 
     # Load the encoder and decoder modules
     encoder = hub.Module(hparams.encoder_module, trainable=False)
     decoder = hub.Module(hparams.decoder_module, trainable=False)
+
+    if hparams.mode == tf.estimator.ModeKeys.PREDICT:
+      def flow_module_spec():
+        inputs = {k: tf.placeholder(tf.float32, shape=[None]) for k in hparams.problem.attributes}
+        cond_layer = tf.concat([tf.expand_dims(inputs[k], axis=1) for k in inputs.keys()],axis=1)
+        flow = self.normalizing_flow(cond_layer, is_training)
+        hub.add_signature(inputs=inputs,
+                          outputs=flow.sample(tf.shape(cond_layer)[0]))
+      flow_spec = hub.create_module_spec(flow_module_spec)
+      flow = hub.Module(flow_spec, name='flow_module')
+      hub.register_module_for_export(flow, "code_sampler")
+      code_sample = flow(y)
+      return decoder(code_sample), {}
 
     # Encode the input image
     if hparams.encode_psf and 'psf' in features:
@@ -53,33 +65,19 @@ class LatentFlow(t2t_model.T2TModel):
     else:
       code = encoder(x)
 
-    #
-
     with tf.variable_scope("flow_module"):
-      cond_layer = tf.concat([tf.expand_dims(y[k], axis=1) for k in hparams.problem.attributes],axis=1)
+
       # Apply some amount of normalization to the features
       y = common_layers.layer_norm(y, name="y_norm")
-      flow = self.normalizing_flow(cond_layer, is_training)
-      loglikelihood = flow.log_prob(code['sample'])
+      flow = self.normalizing_flow(y, is_training)
+      loglikelihood = flow.log_prob(code)
+
 
     # This is the loglikelihood of a batch of images
     tf.summary.scalar('loglikelihood', tf.reduce_mean(loglikelihood))
     loss = - tf.reduce_mean(loglikelihood)
 
+    # Use the decoder to produce some samples
+    logits = decoder(flow.sample(hparams.batch_size))
 
-
-
-    if hparams.mode == tf.estimator.ModeKeys.PREDICT:
-      y = features
-      def flow_module_spec():
-        inputs = {k: tf.placeholder(tf.float32, shape=[None]) for k in y.keys()}
-        cond_layer = tf.concat([tf.expand_dims(inputs[k], axis=1) for k in inputs.keys()],axis=1)
-        flow = self.normalizing_flow(cond_layer, is_training)
-        hub.add_signature(inputs=inputs,
-                          outputs=flow.sample(tf.shape(cond_layer)[0]))
-
-      flow_spec = hub.create_module_spec(flow_module_spec)
-      flow = hub.Module(flow_spec, name='flow_module')
-      hub.register_module_for_export(flow, "code_sampler")
-      code_sample = flow(y)
-      return code_sample, {}
+    return logits, {'training': loss}
