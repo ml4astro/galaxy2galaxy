@@ -30,7 +30,7 @@ class SelfAttentionGan(AbstractGAN):
     z = tf.random.normal(shape, name='z0', dtype=tf.float32)
     return z
 
-  def generator(self, code, mode):
+  def generator(self, code, mode, features):
     """Builds the generator segment of the graph, going from z -> G(z).
     Args:
     zs: Tensor representing the latent variables.
@@ -59,26 +59,6 @@ class SelfAttentionGan(AbstractGAN):
       act5 = tf.nn.relu(bn(act5))
       act6 = ops.snconv2d(act5, 3, 3, 3, 1, 1, training, 'g_snconv_last')
       out = tf.nn.softplus(act6)
-      shape = common_layers.shape_list(out)
-
-      # Applying convolution by PSF convolution
-      if p.apply_psf and 'psf' in features:
-        # if self.num_channels > 1:
-        #   raise NotImplementedError
-        rec_padded = tf.pad(out[:,:,:,0], [[0,0],
-                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
-                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
-        psf_padded = tf.pad(features['psf'][...,0], [[0,0],
-                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
-                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
-        out = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
-
-      # Adds noise according to the provided power spectrum
-      noise = np.sqrt(2)*tf.spectral.rfft2d(tf.random_normal([shape[0], shape[1], shape[2]]))
-      thresholded_ps = tf.where(features['ps'] >= 10, tf.zeros_like(features['ps']), features['ps'])
-      noise = noise*np.sqrt(np.exp(thresholded_ps))
-
-      out = out + tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
       return out
 
   def discriminator(self, image, conditioning, mode):

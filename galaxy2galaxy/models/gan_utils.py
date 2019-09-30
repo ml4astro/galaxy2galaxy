@@ -107,7 +107,7 @@ class AbstractGAN(t2t_model.T2TModel):
 
     def make_generator_spec():
       input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(generator_inputs)[1:])
-      gen_output = self.generator(input_layer, mode, features)
+      gen_output = self.generator(input_layer, mode)
       hub.add_signature(inputs=input_layer, outputs=gen_output)
     gen_spec = hub.create_module_spec(make_generator_spec)
 
@@ -116,7 +116,30 @@ class AbstractGAN(t2t_model.T2TModel):
     generator_module = hub.Module(gen_spec, name="Generator_Module", trainable=True)
 
     # Wraps the modules into functions expected by TF-GAN
+    def generator(code, mode):
+      out = generator_module(code)
+      shape = common_layers.shape_list(out)
+      # Applying convolution by PSF convolution
+      if p.apply_psf and 'psf' in features:
+        rec_padded = tf.pad(out[:,:,:,0], [[0,0],
+                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
+                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
+        psf_padded = tf.pad(features['psf'][...,0], [[0,0],
+                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
+                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
+        out = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
+
+      # Adds noise according to the provided power spectrum
+      noise = np.sqrt(2)*tf.spectral.rfft2d(tf.random_normal([shape[0], shape[1], shape[2]]))
+      thresholded_ps = tf.where(features['ps'] >= 10, tf.zeros_like(features['ps']), features['ps'])
+      noise = noise*np.sqrt(np.exp(thresholded_ps))
+      out = out + tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
+      return out
+
     generator = lambda code, mode: generator_module(code)
+
+
+
     discriminator =  lambda image, conditioning, mode: discriminator_module(image)
 
     # Make GANModel, which encapsulates the GAN model architectures.
