@@ -62,9 +62,9 @@ class SelfAttentionGan(AbstractGAN):
       shape = common_layers.shape_list(out)
 
       # Applying convolution by PSF convolution
-      if hparams.apply_psf and 'psf' in features:
-        if self.num_channels > 1:
-          raise NotImplementedError
+      if p.apply_psf and 'psf' in features:
+        # if self.num_channels > 1:
+        #   raise NotImplementedError
         rec_padded = tf.pad(out[:,:,:,0], [[0,0],
                                                 [0, int(p.psf_convolution_pad_factor*shape[1])],
                                                 [0, int(p.psf_convolution_pad_factor*shape[2])]])
