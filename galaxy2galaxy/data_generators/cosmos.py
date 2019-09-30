@@ -101,13 +101,13 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
       gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
 
       # We apply the orginal psf if a different PSF is not requested
-      if p.psf is None:
+      if ~hasattr(p, "psf") or p.psf is None:
           psf = gal.original_psf
       else:
           psf = p.psf
 
       # Apply random rotation if requested
-      if p.rotation:
+      if hasattr(p, "rotation") and p.rotation:
         rotation_angle = galsim.Angle(-np.random.rand()* 2 * np.pi,
                                       galsim.radians)
         gal = gal.rotate(rotation_angle)
@@ -238,6 +238,10 @@ class Attrs2imgCosmos128(Img2imgCosmos128):
   """ Smaller version of the Img2imgCosmos problem, at half the pixel
   resolution
   """
+
+  def eval_metrics(self):
+    eval_metrics = [ ]
+    return eval_metrics
 
   def hparams(self, defaults, model_hparams):
     p = defaults
