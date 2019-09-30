@@ -53,14 +53,32 @@ class SelfAttentionGan(AbstractGAN):
       act3 = up_block(act2, gf_dim * 4, 'g_block3', training)  # 32
       act3 = ops.sn_non_local_block_sim(act3, training, name='g_ops')  # 32
       act4 = up_block(act3, gf_dim * 2, 'g_block4', training)  # 64
-      if p.noise_sigma >0:
-        act4 = tf.concat([act4, p.noise_sigma*tf.random_normal((p.batch_size, 64, 64,3))],axis=-1)
       act5 = up_block(act4, gf_dim, 'g_block5', training)  # 128
       bn = ops.BatchNorm(name='g_bn')
 
       act5 = tf.nn.relu(bn(act5))
       act6 = ops.snconv2d(act5, 3, 3, 3, 1, 1, training, 'g_snconv_last')
-      out = tf.nn.tanh(act6)
+      out = tf.nn.softplus(act6)
+      shape = common_layers.shape_list(out)
+
+      # Applying convolution by PSF convolution
+      if hparams.apply_psf and 'psf' in features:
+        if self.num_channels > 1:
+          raise NotImplementedError
+        rec_padded = tf.pad(out[:,:,:,0], [[0,0],
+                                                [0, int(hparams.psf_convolution_pad_factor*shape[1])],
+                                                [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
+        psf_padded = tf.pad(features['psf'][...,0], [[0,0],
+                                                [0, int(hparams.psf_convolution_pad_factor*shape[1])],
+                                                [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
+        out = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
+
+      # Adds noise according to the provided power spectrum
+      noise = np.sqrt(2)*tf.spectral.rfft2d(tf.random_normal([shape[0], shape[1], shape[2]]))
+      thresholded_ps = tf.where(features['ps'] >= 10, tf.zeros_like(features['ps']), features['ps'])
+      noise = noise*np.sqrt(np.exp(thresholded_ps))
+
+      out = out + tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
       return out
 
   def discriminator(self, image, conditioning, mode):
