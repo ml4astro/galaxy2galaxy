@@ -107,7 +107,7 @@ class AbstractGAN(t2t_model.T2TModel):
 
     def make_generator_spec():
       input_layer = tf.placeholder(tf.float32, shape=[None] + common_layers.shape_list(generator_inputs)[1:])
-      gen_output = self.generator(input_layer, mode)
+      gen_output = self.generator(input_layer, mode, features)
       hub.add_signature(inputs=input_layer, outputs=gen_output)
     gen_spec = hub.create_module_spec(make_generator_spec)
 
