@@ -113,7 +113,7 @@ class LatentMAF(LatentFlow):
                       conditional_tensor=conditioning,
                       activation=common_layers.belu, name='maf%d'%i)))
       chain.append(tfb.Permute(permutation=init_once(
-                           np.random.permutation(latent_size).astype("int32"),
+                           np.arange(latent_size)[::-1].astype("int32"),
                            name='permutation%d'%i)))
     chain = tfb.Chain(chain)
 
