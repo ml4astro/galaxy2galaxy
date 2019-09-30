@@ -66,11 +66,11 @@ class SelfAttentionGan(AbstractGAN):
         if self.num_channels > 1:
           raise NotImplementedError
         rec_padded = tf.pad(out[:,:,:,0], [[0,0],
-                                                [0, int(hparams.psf_convolution_pad_factor*shape[1])],
-                                                [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
+                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
+                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
         psf_padded = tf.pad(features['psf'][...,0], [[0,0],
-                                                [0, int(hparams.psf_convolution_pad_factor*shape[1])],
-                                                [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
+                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
+                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
         out = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
 
       # Adds noise according to the provided power spectrum
@@ -165,4 +165,5 @@ def sagan_noise():
   hparams.add_hparam("gen_steps", 1)
   hparams.add_hparam("disc_steps", 3)
   hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
+  hparams.add_hparam("psf_convolution_pad_factor", 0.)  # Zero padding factor for convolution
   return hparams
