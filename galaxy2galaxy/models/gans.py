@@ -164,4 +164,5 @@ def sagan_noise():
   hparams.add_hparam("noise_sigma", 0.1)
   hparams.add_hparam("gen_steps", 1)
   hparams.add_hparam("disc_steps", 3)
+  hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
   return hparams
