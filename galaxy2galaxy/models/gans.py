@@ -57,7 +57,7 @@ class SelfAttentionGan(AbstractGAN):
       bn = ops.BatchNorm(name='g_bn')
 
       act5 = tf.nn.relu(bn(act5))
-      act6 = ops.snconv2d(act5, 3, 3, 3, 1, 1, training, 'g_snconv_last')
+      act6 = ops.snconv2d(act5, 1, 3, 3, 1, 1, training, 'g_snconv_last')
       out = tf.nn.softplus(act6)
       return out
 
