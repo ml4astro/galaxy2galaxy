@@ -58,7 +58,7 @@ class SelfAttentionGan(AbstractGAN):
 
       act5 = tf.nn.relu(bn(act5))
       act6 = ops.snconv2d(act5, 1, 3, 3, 1, 1, training, 'g_snconv_last')
-      out = tf.nn.softplus(act6)
+      out = tf.nn.tanh(act6)
       return out
 
   def discriminator(self, image, conditioning, mode):

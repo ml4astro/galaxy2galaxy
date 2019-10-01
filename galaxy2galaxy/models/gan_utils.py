@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_gan as tfgan
 import tensorflow_hub as hub
@@ -117,6 +118,7 @@ class AbstractGAN(t2t_model.T2TModel):
 
     # Wraps the modules into functions expected by TF-GAN
     def generator(code, mode):
+      p = hparams
       out = generator_module(code)
       shape = common_layers.shape_list(out)
       # Applying convolution by PSF convolution
@@ -130,15 +132,11 @@ class AbstractGAN(t2t_model.T2TModel):
         out = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
 
       # Adds noise according to the provided power spectrum
-      noise = np.sqrt(2)*tf.spectral.rfft2d(tf.random_normal([shape[0], shape[1], shape[2]]))
-      thresholded_ps = tf.where(features['ps'] >= 10, tf.zeros_like(features['ps']), features['ps'])
-      noise = noise*np.sqrt(np.exp(thresholded_ps))
+      noise = tf.spectral.rfft2d(np.sqrt(2.)*tf.random_normal([shape[0], shape[1], shape[2]]))
+      thresholded_ps = tf.where(features['ps'] >= 10, tf.zeros_like(features['ps']), tf.sqrt(tf.exp(features['ps'])))
+      noise = noise*tf.cast(thresholded_ps, tf.complex64)
       out = out + tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
       return out
-
-    generator = lambda code, mode: generator_module(code)
-
-
 
     discriminator =  lambda image, conditioning, mode: discriminator_module(image)
 
