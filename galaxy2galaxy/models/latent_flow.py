@@ -62,9 +62,9 @@ class LatentFlow(t2t_model.T2TModel):
     code_shape = encoder.get_output_info_dict()['default'].get_shape()
     code_shape = [-1, code_shape[1].value, code_shape[2].value, code_shape[3].value]
 
-    def get_flow(inputs):
+    def get_flow(inputs, is_training=True):
       y = tf.concat([tf.expand_dims(inputs[k], axis=1) for k in hparamsp.attributes] ,axis=1)
-      y = common_layers.layer_norm(y, name="y_norm")
+      y = tf.layers.batch_normalization(y, name="y_norm", training=is_training)
       flow = self.normalizing_flow(y, latent_size)
       code = tf.reshape(flow.sample(tf.shape(y)[0]), code_shape)
       return code, flow
@@ -73,7 +73,7 @@ class LatentFlow(t2t_model.T2TModel):
       # Export the latent flow alone
       def flow_module_spec():
         inputs = {k: tf.placeholder(tf.float32, shape=[None]) for k in hparamsp.attributes}
-        code, _ = get_flow(inputs)
+        code, _ = get_flow(inputs, is_training=False)
         hub.add_signature(inputs=inputs, outputs=code)
       flow_spec = hub.create_module_spec(flow_module_spec)
       flow = hub.Module(flow_spec, name='flow_module')
@@ -113,7 +113,7 @@ class LatentMAF(LatentFlow):
       chain.append(tfb.MaskedAutoregressiveFlow(
                   shift_and_log_scale_fn=masked_autoregressive_conditional_template(
                   hidden_layers=[hparams.hidden_size, hparams.hidden_size],
-                      conditional_tensor=conditioning,
+                      conditional_tensor=conditioning, shift_only= i>2,
                       activation=common_layers.belu, name='maf%d'%i)))
       chain.append(tfb.Permute(permutation=init_once(
                            np.arange(latent_size)[::-1].astype("int32"),
@@ -131,19 +131,47 @@ def latent_flow():
   """Basic autoencoder model."""
   hparams = common_hparams.basic_params1()
   hparams.optimizer = "adam"
-  hparams.learning_rate_constant = 0.001
+  hparams.learning_rate_constant = 0.0002
   hparams.learning_rate_warmup_steps = 500
   hparams.learning_rate_schedule = "constant * linear_warmup"
   hparams.label_smoothing = 0.0
   hparams.batch_size = 128
-  hparams.hidden_size = 512
+  hparams.hidden_size = 256
   hparams.num_hidden_layers = 4
   hparams.initializer = "uniform_unit_scaling"
   hparams.initializer_gain = 1.0
   hparams.weight_decay = 0.0
   hparams.kernel_height = 4
   hparams.kernel_width = 4
-  hparams.dropout = 0.05
+  hparams.dropout = 0.0
+
+  # hparams specifying the encoder
+  hparams.add_hparam("encoder_module", "") # This needs to be overriden
+
+  # hparams related to the PSF
+  hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+
+  return hparams
+
+
+@registry.register_hparams
+def latent_flow_larger():
+  """Basic autoencoder model."""
+  hparams = common_hparams.basic_params1()
+  hparams.optimizer = "adam"
+  hparams.learning_rate_constant = 0.001
+  hparams.learning_rate_warmup_steps = 500
+  hparams.learning_rate_schedule = "constant * linear_warmup"
+  hparams.label_smoothing = 0.0
+  hparams.batch_size = 128
+  hparams.hidden_size = 256
+  hparams.num_hidden_layers = 8
+  hparams.initializer = "uniform_unit_scaling"
+  hparams.initializer_gain = 1.0
+  hparams.weight_decay = 0.0
+  hparams.kernel_height = 4
+  hparams.kernel_width = 4
+  hparams.dropout = 0.0
 
   # hparams specifying the encoder
   hparams.add_hparam("encoder_module", "") # This needs to be overriden
