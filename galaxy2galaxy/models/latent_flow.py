@@ -159,9 +159,9 @@ def latent_flow_larger():
   """Basic autoencoder model."""
   hparams = common_hparams.basic_params1()
   hparams.optimizer = "adam"
-  hparams.learning_rate_constant = 0.001
-  hparams.learning_rate_warmup_steps = 500
-  hparams.learning_rate_schedule = "constant * linear_warmup"
+  hparams.learning_rate_constant = 0.1
+  hparams.learning_rate_warmup_steps = 1000
+  hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
   hparams.label_smoothing = 0.0
   hparams.batch_size = 128
   hparams.hidden_size = 256
