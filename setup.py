@@ -29,7 +29,7 @@ setup(
         'numpy',
         'astropy',
         'tensor2tensor>=1.13.4',
-        'tensorflow',
+        'tensorflow<2.0.0',
         'tensorflow-hub',
         'tensorflow-datasets',
         'tensorflow-probability',
