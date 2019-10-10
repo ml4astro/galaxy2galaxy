@@ -32,7 +32,7 @@ setup(
         'tensorflow<2.0.0',
         'tensorflow-hub',
         'tensorflow-datasets',
-        'tensorflow-probability',
+        'tensorflow-probability<0.8',
         'tensorflow-gan',
         'fits2hdf',
         'unagi>=0.1.1'
