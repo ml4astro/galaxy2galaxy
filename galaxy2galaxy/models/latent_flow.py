@@ -113,10 +113,12 @@ class LatentMAF(LatentFlow):
       chain.append(tfb.MaskedAutoregressiveFlow(
                   shift_and_log_scale_fn=masked_autoregressive_conditional_template(
                   hidden_layers=[hparams.hidden_size, hparams.hidden_size],
-                      conditional_tensor=conditioning, shift_only= i>2,
+                      conditional_tensor=conditioning,
+                      shift_only=(i>hparams.num_hidden_layers//3),
+                      log_scale_clip_gradient=True,
                       activation=common_layers.belu, name='maf%d'%i)))
       chain.append(tfb.Permute(permutation=init_once(
-                           np.arange(latent_size)[::-1].astype("int32"),
+                           np.arange(latent_size)[::-1].astype("int32") if i % 2 ==0 else np.random.permutation(latent_size).astype("int32"),
                            name='permutation%d'%i)))
     chain = tfb.Chain(chain)
 
@@ -198,6 +200,33 @@ def latent_flow_larger():
   hparams.batch_size = 256
   hparams.hidden_size = 256
   hparams.num_hidden_layers = 10
+  hparams.initializer = "uniform_unit_scaling"
+  hparams.initializer_gain = 1.0
+  hparams.weight_decay = 0.0
+  hparams.kernel_height = 4
+  hparams.kernel_width = 4
+  hparams.dropout = 0.0
+
+  # hparams specifying the encoder
+  hparams.add_hparam("encoder_module", "") # This needs to be overriden
+
+  # hparams related to the PSF
+  hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+
+  return hparams
+
+@registry.register_hparams
+def latent_flow_larger2():
+  """Basic autoencoder model."""
+  hparams = common_hparams.basic_params1()
+  hparams.optimizer = "adam"
+  hparams.learning_rate_constant = 0.1
+  hparams.learning_rate_warmup_steps = 1000
+  hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
+  hparams.label_smoothing = 0.0
+  hparams.batch_size = 256
+  hparams.hidden_size = 256
+  hparams.num_hidden_layers = 16
   hparams.initializer = "uniform_unit_scaling"
   hparams.initializer_gain = 1.0
   hparams.weight_decay = 0.0
