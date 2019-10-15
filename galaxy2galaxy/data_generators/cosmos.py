@@ -98,7 +98,9 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     cat_param = append_fields(cat_param, 'disk_flux_log10', np.where(cat_param['use_bulgefit'] ==1, np.log10(cat_param['flux'][:,2]), np.log10(cat_param['flux'][:,0])))
 
     # Parameters for a single component fit
+    cat_param = append_fields(cat_param, 'bulge_flux_log10', np.log10(sparams[:,0]))
     cat_param = append_fields(cat_param, 'sersic_q', sparams[:,3])
+    cat_param = append_fields(cat_param, 'sersic_hlr', sparams[:,1])
     cat_param = append_fields(cat_param, 'sersic_n', sparams[:,2])
     cat_param = append_fields(cat_param, 'sersic_beta', sparams[:,7])
 
