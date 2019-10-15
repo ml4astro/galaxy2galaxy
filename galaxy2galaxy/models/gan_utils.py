@@ -132,10 +132,10 @@ class AbstractGAN(t2t_model.T2TModel):
         out = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
 
       # Adds noise according to the provided power spectrum
-      noise = tf.spectral.rfft2d(np.sqrt(2.)*tf.random_normal([shape[0], shape[1], shape[2]]))
+      noise = tf.spectral.rfft2d(np.sqrt(2.)*tf.random_normal(out.get_shape()[:3]))
       thresholded_ps = tf.where(features['ps'] >= 10, tf.zeros_like(features['ps']), tf.sqrt(tf.exp(features['ps'])))
       noise = noise*tf.cast(thresholded_ps, tf.complex64)
-      out = out + tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
+      out = out #+ tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
       return out
 
     discriminator =  lambda image, conditioning, mode: discriminator_module(image)

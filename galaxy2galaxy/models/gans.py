@@ -53,12 +53,14 @@ class SelfAttentionGan(AbstractGAN):
       act3 = up_block(act2, gf_dim * 4, 'g_block3', training)  # 32
       act3 = ops.sn_non_local_block_sim(act3, training, name='g_ops')  # 32
       act4 = up_block(act3, gf_dim * 2, 'g_block4', training)  # 64
+      n = tf.random_normal(tf.shape(act4))
+      act4 = tf.concat([act4, n],axis=-1)
       act5 = up_block(act4, gf_dim, 'g_block5', training)  # 128
       bn = ops.BatchNorm(name='g_bn')
 
       act5 = tf.nn.relu(bn(act5))
       act6 = ops.snconv2d(act5, 1, 3, 3, 1, 1, training, 'g_snconv_last')
-      out = tf.nn.softplus(act6)
+      out = tf.nn.tanh(act6)
       return out
 
   def discriminator(self, image, conditioning, mode):
@@ -145,6 +147,6 @@ def sagan_noise():
   hparams.add_hparam("noise_sigma", 0.1)
   hparams.add_hparam("gen_steps", 1)
   hparams.add_hparam("disc_steps", 3)
-  hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
+  hparams.add_hparam("apply_psf", False)  # Should we apply the PSF at the decoder
   hparams.add_hparam("psf_convolution_pad_factor", 0.)  # Zero padding factor for convolution
   return hparams

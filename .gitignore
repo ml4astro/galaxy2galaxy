@@ -107,3 +107,4 @@ venv.bak/
 training/
 modules/
 data/
+notebooks
