@@ -159,7 +159,7 @@ class Img2imgCosmosHSC(Img2imgCosmos):
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
                     "targets": None}
-    p.psf = galsim.InterpolatedImage(os.path.join(_COSMOS_DATA_DIR, 'hst_cosmos_effective_psf.fits'), scale=0.03)
+    p.psf = galsim.InterpolatedKImage(os.path.join(_COSMOS_DATA_DIR, 'hsc_hann_window.fits'), scale=0.03)
     p.rotation = True
 
   def preprocess_example(self, example, unused_mode, unused_hparams):
