@@ -17,6 +17,8 @@ from tensor2tensor.utils import metrics
 
 from galaxy2galaxy.utils import registry
 
+from astropy.io import fits
+import numpy as np
 import tensorflow as tf
 import galsim
 
@@ -159,7 +161,7 @@ class Img2imgCosmosHSC(Img2imgCosmos):
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
                     "targets": None}
-    p.psf = galsim.InterpolatedKImage(os.path.join(_COSMOS_DATA_DIR, 'hsc_hann_window.fits'), scale=0.03)
+    p.psf = galsim.InterpolatedKImage(galsim.ImageCD(fits.getdata(os.path.join(_COSMOS_DATA_DIR, 'hsc_hann_window.fits'))+0j, scale=2. * np.pi / (0.03 * 501)))
     p.rotation = True
 
   def preprocess_example(self, example, unused_mode, unused_hparams):

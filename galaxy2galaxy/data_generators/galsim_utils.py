@@ -100,14 +100,14 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 image_key="psf/encoded",
                 format_key="psf/format",
                 channels=self.num_bands,
-                shape=[p.img_len, p.img_len, self.num_bands],
+                shape=[2*p.img_len, 2*p.img_len // 2 + 1, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="ps/encoded",
                 format_key="ps/format",
                 channels=self.num_bands,
-                shape=[p.img_len, p.img_len // 2 + 1],
+                shape=[2*p.img_len, 2*p.img_len // 2 + 1],
                 dtype=tf.float32),
     }
 
@@ -166,10 +166,10 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     # Inverse Fourier transform of the image
     im = np.fft.fftshift(np.fft.irfft2(
         np.fft.fftshift(imC.array, axes=0))).astype('float32')
-    im = im[stamp_size:-stamp_size, stamp_size:-stamp_size]
+    im = im[stamp_size//2:-stamp_size//2, stamp_size//2:-stamp_size//2]
 
     # Transform the psf array into proper format for Theano
-    im_psf = np.fft.fftshift(imCp.array, axes=0).astype('float32')
+    im_psf = abs(np.fft.fftshift(imCp.array, axes=0)).astype('float32')
 
     # Compute noise power spectrum
     ps = gal.noise._get_update_rootps((2*stamp_size, 2*stamp_size),
