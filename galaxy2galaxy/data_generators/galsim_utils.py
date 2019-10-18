@@ -18,7 +18,7 @@ import os
 import sys
 import galsim
 import argparse
-
+from galsim.bounds import _BoundsI
 
 class GalsimProblem(astroimage_utils.AstroImageProblem):
   """Base class for image problems generated with GalSim.
@@ -150,30 +150,29 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     # Apply the PSF
     gal = galsim.Convolve(gal, psf)
 
-    # Draw the Fourier domain image of the galaxy
-    imC = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
-                         np.pi / (pixel_scale * stamp_size))
+    # Draw the Fourier domain image of the galaxy, using x2 zero padding
+    imC = galsim.ImageCF(scale=2. * np.pi / (2*pixel_scale * stamp_size),
+                     bounds=_BoundsI(0, 2*stamp_size//2, -2*stamp_size//2, 2*stamp_size//2-1))
 
-    imCp = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
-                          np.pi / (pixel_scale * stamp_size))
+    imCp = galsim.ImageCF(scale=2. * np.pi / (2*pixel_scale * stamp_size),
+                     bounds=_BoundsI(0, 2*stamp_size//2, -2*stamp_size//2, 2*stamp_size//2-1))
 
-    gal.drawKImage(image=imC)
-    psf.drawKImage(image=imCp)
+    gal.drawKImage(image=imC, recenter=False)
+    psf.drawKImage(image=imCp, recenter=False)
 
     # Keep track of the pixels with 0 value
-    mask = ~(np.fft.fftshift(imC.array)[:, :(stamp_size) // 2 + 1] == 0)
+    mask = ~(np.fft.fftshift(imC.array) == 0)
 
     # Inverse Fourier transform of the image
-    # TODO: figure out why we need 2 fftshifts....
-    im = np.fft.fftshift(np.fft.ifft2(
-        np.fft.fftshift(imC.array))).real.astype('float32')
+    im = np.fft.fftshift(np.fft.irfft2(
+        np.fft.fftshift(imC.array, axes=0))).astype('float32')
+    im = im[stamp_size:-stamp_size, stamp_size:-stamp_size]
 
     # Transform the psf array into proper format for Theano
-    im_psf = np.fft.fftshift(np.fft.ifft2(
-            np.fft.fftshift(imCp.array))).real.astype('float32')
+    im_psf = np.fft.fftshift(imCp.array, axes=0).astype('float32')
 
     # Compute noise power spectrum
-    ps = gal.noise._get_update_rootps((stamp_size, stamp_size),
+    ps = gal.noise._get_update_rootps((2*stamp_size, 2*stamp_size),
                                       wcs=galsim.PixelScale(pixel_scale))
 
     # The following comes from correlatednoise.py
