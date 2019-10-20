@@ -100,13 +100,15 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 image_key="psf/encoded",
                 format_key="psf/format",
                 channels=self.num_bands,
-                shape=[2*p.img_len, 2*p.img_len // 2 + 1, self.num_bands],
+                # The factor 4 here is to account for x2 zero padding, x2 interpolation
+                shape=[4*p.img_len, 4*p.img_len // 2 + 1, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="ps/encoded",
                 format_key="ps/format",
                 channels=self.num_bands,
+                # The factor 2 here is to account for x2 zero padding
                 shape=[2*p.img_len, 2*p.img_len // 2 + 1],
                 dtype=tf.float32),
     }
@@ -150,34 +152,31 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     # Apply the PSF
     gal = galsim.Convolve(gal, psf)
 
-    # Draw the Fourier domain image of the galaxy, using x2 zero padding
-    imC = galsim.ImageCF(scale=2. * np.pi / (2*pixel_scale * stamp_size),
-                     bounds=_BoundsI(0, 2*stamp_size//2, -2*stamp_size//2, 2*stamp_size//2-1))
+    # We draw the pixel image of the convolved image
+    im = gal.drawImage(nx=stamp_size, ny=stamp_size, scale=pixel_scale,
+                       method='no_pixel', use_true_center=False).array
 
-    imCp = galsim.ImageCF(scale=2. * np.pi / (2*pixel_scale * stamp_size),
-                     bounds=_BoundsI(0, 2*stamp_size//2, -2*stamp_size//2, 2*stamp_size//2-1))
+    # Draw the Fourier domain image of the galaxy, using x2 zero padding,
+    # and x2 subsampling
+    interp_factor=2
+    padding_factor=2
+    Nk = stamp_size*interp_factor*padding_factor
+    bounds = _BoundsI(0, Nk//2, -Nk//2, Nk//2-1)
+    imCp = psf.drawKImage(bounds=bounds,
+                         scale=2.*np.pi/(Nk * pixel_scale / interp_factor),
+                         recenter=False)
 
-    gal.drawKImage(image=imC, recenter=False)
-    psf.drawKImage(image=imCp, recenter=False)
-
-    # Keep track of the pixels with 0 value
-    mask = ~(np.fft.fftshift(imC.array) == 0)
-
-    # Inverse Fourier transform of the image
-    im = np.fft.fftshift(np.fft.irfft2(
-        np.fft.fftshift(imC.array, axes=0))).astype('float32')
-    im = im[stamp_size//2:-stamp_size//2, stamp_size//2:-stamp_size//2]
-
-    # Transform the psf array into proper format for Theano
-    im_psf = abs(np.fft.fftshift(imCp.array, axes=0)).astype('float32')
+    # Transform the psf array into proper format, remove the phase
+    im_psf = np.abs(np.fft.fftshift(imCp.array, axes=0)).astype('float32')
 
     # Compute noise power spectrum
-    ps = gal.noise._get_update_rootps((2*stamp_size, 2*stamp_size),
-                                      wcs=galsim.PixelScale(pixel_scale))
+    ps = gal.noise._get_update_rootps((padding_factor*stamp_size,
+                                       padding_factor*stamp_size),
+                                       wcs=galsim.PixelScale(pixel_scale))
 
     # The following comes from correlatednoise.py
     rt2 = np.sqrt(2.)
-    shape = (stamp_size, stamp_size)
+    shape = (padding_factor*stamp_size, padding_factor*stamp_size)
     ps[0, 0] = rt2 * ps[0, 0]
     # Then make the changes necessary for even sized arrays
     if shape[1] % 2 == 0:  # x dimension even
@@ -190,7 +189,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
                 ps[shape[0] // 2, shape[1] // 2]
 
     # Apply mask to power spectrum so that it is very large outside maxk
-    ps = np.where(mask, np.log(ps**2), 10).astype('float32')
+    ps = np.log(ps**2).astype('float32')
 
     serialized_output = {"image/encoded": [im.tostring()],
             "image/format": ["raw"],
