@@ -100,13 +100,13 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
 
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here
-      gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
+      gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale*2)
 
       # We apply the orginal psf if a different PSF is not requested
-      if ~hasattr(p, "psf") or p.psf is None:
-          psf = gal.original_psf
+      if hasattr(p, "psf"):
+        psf = p.psf
       else:
-          psf = p.psf
+        psf = gal.original_psf
 
       # Apply random rotation if requested
       if hasattr(p, "rotation") and p.rotation:
