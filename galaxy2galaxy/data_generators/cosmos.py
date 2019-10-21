@@ -225,6 +225,10 @@ class Img2imgCosmos128(Img2imgCosmos):
   resolution
   """
 
+  def eval_metrics(self):
+    eval_metrics = [ ]
+    return eval_metrics
+
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = 0.03

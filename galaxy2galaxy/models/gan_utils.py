@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_gan as tfgan
 import tensorflow_hub as hub
@@ -116,7 +117,27 @@ class AbstractGAN(t2t_model.T2TModel):
     generator_module = hub.Module(gen_spec, name="Generator_Module", trainable=True)
 
     # Wraps the modules into functions expected by TF-GAN
-    generator = lambda code, mode: generator_module(code)
+    def generator(code, mode):
+      p = hparams
+      out = generator_module(code)
+      shape = common_layers.shape_list(out)
+      # Applying convolution by PSF convolution
+      if p.apply_psf and 'psf' in features:
+        rec_padded = tf.pad(out[:,:,:,0], [[0,0],
+                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
+                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
+        psf_padded = tf.pad(features['psf'][...,0], [[0,0],
+                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
+                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
+        out = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
+
+      # Adds noise according to the provided power spectrum
+      noise = tf.spectral.rfft2d(np.sqrt(2.)*tf.random_normal(out.get_shape()[:3]))
+      thresholded_ps = tf.where(features['ps'] >= 10, tf.zeros_like(features['ps']), tf.sqrt(tf.exp(features['ps'])))
+      noise = noise*tf.cast(thresholded_ps, tf.complex64)
+      out = out #+ tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
+      return out
+
     discriminator =  lambda image, conditioning, mode: discriminator_module(image)
 
     # Make GANModel, which encapsulates the GAN model architectures.
