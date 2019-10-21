@@ -30,6 +30,7 @@ from tensor2tensor.utils import t2t_model
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
+from galflow import convolve
 
 from galaxy2galaxy.layers.image_utils import pack_images
 
@@ -71,11 +72,13 @@ def autoencoder_body(self, features):
   is_training = hparams.mode == tf.estimator.ModeKeys.TRAIN
 
   output_activation = tf.nn.softplus if hparams.output_activation == 'softplus' else None
+  input_shape =  [None, ] + common_layers.shape_list(features["inputs"])[1:]
 
   if hparams.mode == tf.estimator.ModeKeys.PREDICT:
     # In predict mode, we also define TensorFlow Hub modules for all pieces of
     # the autoencoder
-    input_shape =  [None, ] + common_layers.shape_list(features["inputs"])[1:]
+    if hparams.encode_psf and 'psf' in features:
+      psf_shape =  [None, ] + common_layers.shape_list(features["psf"])[1:]
     # First build encoder spec
     def make_model_spec():
       input_layer = tf.placeholder(tf.float32, shape=input_shape)
@@ -86,11 +89,15 @@ def autoencoder_body(self, features):
 
     def make_model_spec_psf():
       input_layer = tf.placeholder(tf.float32, shape=input_shape)
-      psf_layer = tf.placeholder(tf.float32, shape=input_shape)
+      psf_layer = tf.placeholder(tf.float32, shape=psf_shape)
       x = self.embed(tf.expand_dims(input_layer, -1))
 
       # If we have access to the PSF, we add this information to the encoder
       if hparams.encode_psf and 'psf' in features:
+        psf_image = tf.expand_dims(tf.signal.irfft2d(tf.cast(psf_layer[...,0], tf.complex64)), axis=-1)
+        # Roll the image to undo the fftshift, assuming x2 zero padding and x2 subsampling
+        psf_image = tf.roll(psf_image, shift=[2*input_shape[1], 2*input_shape[2]], axis=[1,2])
+        psf_image = tf.image.resize_with_crop_or_pad(psf_image, input_shape[1], input_shape[2])
         net_psf = tf.layers.conv2d(psf_layer,
                                    hparams.hidden_size // 4, 5,
                                    padding='same', name="psf_embed_1")
@@ -147,8 +154,13 @@ def autoencoder_body(self, features):
     # Run encoder.
     with tf.variable_scope('encoder_module'):
       # If we have access to the PSF, we add this information to the encoder
+      # Note that we only support single band images so far...
       if hparams.encode_psf and 'psf' in features:
-        net_psf = tf.layers.conv2d(features['psf'],
+        psf_image = tf.expand_dims(tf.signal.irfft2d(tf.cast(features['psf'][...,0], tf.complex64)), axis=-1)
+        # Roll the image to undo the fftshift, assuming x2 zero padding and x2 subsampling
+        psf_image = tf.roll(psf_image, shift=[2*input_shape[1], 2*input_shape[2]], axis=[1,2])
+        psf_image = tf.image.resize_with_crop_or_pad(psf_image, input_shape[1], input_shape[2])
+        net_psf = tf.layers.conv2d(psf_image,
                                    hparams.hidden_size // 4, 5,
                                    padding='same', name="psf_embed_1")
         net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
@@ -218,14 +230,8 @@ def autoencoder_body(self, features):
   if hparams.apply_psf and 'psf' in features:
     if self.num_channels > 1:
       raise NotImplementedError
-    rec_padded = tf.pad(reconstr[:,:,:,0], [[0,0],
-                                            [0, int(hparams.psf_convolution_pad_factor*shape[1])],
-                                            [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
-    psf_padded = tf.pad(features['psf'][...,0], [[0,0],
-                                            [0, int(hparams.psf_convolution_pad_factor*shape[1])],
-                                            [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
-    reconstr = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
-    reconstr = reconstr[:, :shape[1], :shape[2], :]
+
+    reconstr = convolve(reconstr, tf.cast(features['psf'][...,0], tf.complex64))
 
   # Losses.
   losses = {

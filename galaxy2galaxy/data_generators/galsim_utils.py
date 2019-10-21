@@ -109,7 +109,7 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 format_key="ps/format",
                 channels=self.num_bands,
                 # The factor 2 here is to account for x2 zero padding
-                shape=[2*p.img_len, 2*p.img_len // 2 + 1],
+                shape=[p.img_len, p.img_len // 2 + 1],
                 dtype=tf.float32),
     }
 
@@ -149,8 +149,17 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     Draws the galaxy, psf and noise power spectrum on a postage stamp and
     encodes it to be exported in a TFRecord.
     """
+
     # Apply the PSF
     gal = galsim.Convolve(gal, psf)
+
+    # Draw a kimage of the galaxy, just to figure out what maxk is, there might
+    # be more efficient ways to do this though...
+    bounds = _BoundsI(0, stamp_size//2, -stamp_size//2, stamp_size//2-1)
+    imG = gal.drawKImage(bounds=bounds,
+                         scale=2.*np.pi/(stamp_size * pixel_scale),
+                         recenter=False)
+    mask = ~(np.fft.fftshift(imG.array, axes=0) == 0)
 
     # We draw the pixel image of the convolved image
     im = gal.drawImage(nx=stamp_size, ny=stamp_size, scale=pixel_scale,
@@ -169,14 +178,14 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     # Transform the psf array into proper format, remove the phase
     im_psf = np.abs(np.fft.fftshift(imCp.array, axes=0)).astype('float32')
 
-    # Compute noise power spectrum
-    ps = gal.noise._get_update_rootps((padding_factor*stamp_size,
-                                       padding_factor*stamp_size),
+    # Compute noise power spectrum, at the resolution and stamp size of target
+    # image
+    ps = gal.noise._get_update_rootps((stamp_size, stamp_size),
                                        wcs=galsim.PixelScale(pixel_scale))
 
     # The following comes from correlatednoise.py
     rt2 = np.sqrt(2.)
-    shape = (padding_factor*stamp_size, padding_factor*stamp_size)
+    shape = (stamp_size, stamp_size)
     ps[0, 0] = rt2 * ps[0, 0]
     # Then make the changes necessary for even sized arrays
     if shape[1] % 2 == 0:  # x dimension even
@@ -189,8 +198,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
                 ps[shape[0] // 2, shape[1] // 2]
 
     # Apply mask to power spectrum so that it is very large outside maxk
-    ps = np.log(ps**2).astype('float32')
-
+    ps = np.where(mask, np.log(ps**2), 10).astype('float32')
     serialized_output = {"image/encoded": [im.tostring()],
             "image/format": ["raw"],
             "psf/encoded": [im_psf.tostring()],
