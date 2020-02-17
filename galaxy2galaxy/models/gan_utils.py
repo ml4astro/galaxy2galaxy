@@ -19,6 +19,7 @@ from tensor2tensor.utils import t2t_model
 from tensor2tensor.layers import common_layers
 
 from galaxy2galaxy.layers import spectral_ops as ops
+from galflow import convolve
 
 
 class AbstractGAN(t2t_model.T2TModel):
@@ -123,19 +124,13 @@ class AbstractGAN(t2t_model.T2TModel):
       shape = common_layers.shape_list(out)
       # Applying convolution by PSF convolution
       if p.apply_psf and 'psf' in features:
-        rec_padded = tf.pad(out[:,:,:,0], [[0,0],
-                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
-                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
-        psf_padded = tf.pad(features['psf'][...,0], [[0,0],
-                                                [0, int(p.psf_convolution_pad_factor*shape[1])],
-                                                [0, int(p.psf_convolution_pad_factor*shape[2])]])
-        out = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
+        out = convolve(out, tf.cast(features['psf'][...,0], tf.complex64))
 
       # Adds noise according to the provided power spectrum
-      noise = tf.spectral.rfft2d(np.sqrt(2.)*tf.random_normal(out.get_shape()[:3]))
-      thresholded_ps = tf.where(features['ps'] >= 10, tf.zeros_like(features['ps']), tf.sqrt(tf.exp(features['ps'])))
+      noise = tf.spectral.rfft2d(tf.random_normal(out.get_shape()[:3]))
+      thresholded_ps = tf.where(features['ps'] >= 9, tf.zeros_like(features['ps']), tf.sqrt(tf.exp(features['ps'])))
       noise = noise*tf.cast(thresholded_ps, tf.complex64)
-      out = out #+ tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
+      out = out + tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
       return out
 
     discriminator =  lambda image, conditioning, mode: discriminator_module(image)

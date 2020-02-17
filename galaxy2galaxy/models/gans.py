@@ -7,6 +7,8 @@ import tensorflow as tf
 import tensorflow_gan as tfgan
 from tensorflow.python.summary import summary
 
+from galflow import convolve
+
 from tensor2tensor.utils import hparams_lib
 from tensor2tensor.layers import common_layers
 from tensor2tensor.layers import common_hparams
@@ -53,14 +55,13 @@ class SelfAttentionGan(AbstractGAN):
       act3 = up_block(act2, gf_dim * 4, 'g_block3', training)  # 32
       act3 = ops.sn_non_local_block_sim(act3, training, name='g_ops')  # 32
       act4 = up_block(act3, gf_dim * 2, 'g_block4', training)  # 64
-      n = tf.random_normal(tf.shape(act4))
-      act4 = tf.concat([act4, n],axis=-1)
       act5 = up_block(act4, gf_dim, 'g_block5', training)  # 128
       bn = ops.BatchNorm(name='g_bn')
 
       act5 = tf.nn.relu(bn(act5))
       act6 = ops.snconv2d(act5, 1, 3, 3, 1, 1, training, 'g_snconv_last')
-      out = tf.nn.tanh(act6)
+
+      out = act6 #tf.nn.softplus(act6)
       return out
 
   def discriminator(self, image, conditioning, mode):
