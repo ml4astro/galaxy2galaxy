@@ -98,7 +98,7 @@ def autoencoder_body(self, features):
         # Roll the image to undo the fftshift, assuming x2 zero padding and x2 subsampling
         psf_image = tf.roll(psf_image, shift=[2*input_shape[1], 2*input_shape[2]], axis=[1,2])
         psf_image = tf.image.resize_with_crop_or_pad(psf_image, input_shape[1], input_shape[2])
-        net_psf = tf.layers.conv2d(psf_layer,
+        net_psf = tf.layers.conv2d(psf_image,
                                    hparams.hidden_size // 4, 5,
                                    padding='same', name="psf_embed_1")
         net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
