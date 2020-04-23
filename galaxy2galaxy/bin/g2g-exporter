@@ -6,6 +6,11 @@ from __future__ import print_function
 
 import os
 
+import tensorflow as tf
+tf.disable_v2_behavior()
+
+import tensorflow_hub as hub
+
 from tensor2tensor.bin import t2t_trainer
 from tensor2tensor.utils import decoding
 from tensor2tensor.utils import t2t_model
@@ -15,8 +20,6 @@ from tensor2tensor.utils import usr_dir
 from galaxy2galaxy import models
 from galaxy2galaxy import problems
 
-import tensorflow as tf
-import tensorflow_hub as hub
 
 FLAGS = tf.flags.FLAGS
 
@@ -97,6 +100,8 @@ def main(_):
   run_config = t2t_trainer.create_run_config(hparams)
 
   estimator = create_estimator(run_config, hparams)
+  hparams.img_len = problem.get_hparams().img_len
+  hparams.attributes = problem.get_hparams().attributes
 
   # Use tf hub to export any module that has been registered
   exporter = hub.LatestModuleExporter("tf_hub",
