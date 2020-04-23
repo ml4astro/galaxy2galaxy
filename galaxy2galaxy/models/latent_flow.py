@@ -97,7 +97,7 @@ class LatentFlow(t2t_model.T2TModel):
     # This is the loglikelihood of a batch of images
     tf.summary.scalar('loglikelihood', tf.reduce_mean(loglikelihood))
     loss = - tf.reduce_mean(loglikelihood)
-    return samples, {'training': loss}
+    return code, {'training': loss}
 
 @registry.register_model
 class LatentMAF(LatentFlow):
