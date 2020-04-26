@@ -211,6 +211,9 @@ def continuous_autoencoder_basic():
   # hparams related to output activation
   hparams.add_hparam("output_activation", 'softplus') # either none or softplus
 
+  # hparams related to additional regularization of the output
+  hparams.add_hparam("total_variation_loss", 0.) # Factor to apply to a loss penalizing the TV of the unconvolved image
+
   # hparams related to the likelihood
   hparams.add_hparam("likelihood_type", "Fourier") # Pixel or Fourier
   hparams.add_hparam("noise_rms", 0.03) # Value of noise RMS, used for diagonal likelihood
@@ -254,7 +257,7 @@ def continuous_autoencoder_residual_128():
   hparams.hidden_size = 32
   hparams.max_hidden_size = 512
   hparams.batch_size = 32
-  hparams.bottleneck_bits = 32
+  hparams.bottleneck_bits = 16
 
   hparams.bottleneck_warmup_steps = 5000
 

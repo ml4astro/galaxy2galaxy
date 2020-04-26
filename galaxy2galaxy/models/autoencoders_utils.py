@@ -225,6 +225,9 @@ def autoencoder_body(self, features):
     reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final",
                                activation=output_activation)
 
+  # Optionally regularizes further the output
+  tv = tf.reduce_mean(tf.reduce_sum(tf.image.total_variation(reconstr), axis=[1,2,3]))
+
   # Apply channel-wise convolution with the PSF if requested
   # TODO: Handle multiple bands
   if hparams.apply_psf and 'psf' in features:
@@ -236,7 +239,8 @@ def autoencoder_body(self, features):
   # Losses.
   losses = {
       "bottleneck_extra": b_loss,
-      "bottleneck_l2": hparams.bottleneck_l2_factor * xb_loss
+      "bottleneck_l2": hparams.bottleneck_l2_factor * xb_loss,
+      "total_variation": hparams.total_variation_loss * tv
   }
 
   loglik = loglikelihood_fn(labels, reconstr, features, hparams)
@@ -245,7 +249,8 @@ def autoencoder_body(self, features):
   tf.summary.scalar("negloglik", targets_loss)
   tf.summary.scalar("bottleneck_loss", b_loss)
 
-  losses["training"] = targets_loss
+  # Compute final loss
+  losses["training"] = targets_loss + b_loss + hparams.bottleneck_l2_factor * xb_loss + hparams.total_variation_loss * tv
   logits = tf.reshape(reconstr, labels_shape)
 
   image_summary("ae", reconstr)
