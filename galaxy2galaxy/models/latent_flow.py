@@ -75,6 +75,7 @@ class LatentFlow(t2t_model.T2TModel):
         random_normal = tf.placeholder(tf.float32, shape=[None, latent_size])
         flow = get_flow(inputs_params, is_training=False)
         samples = flow._bijector.forward(random_normal)
+        samples = tf.reshape(samples, code_shape)
         hub.add_signature(inputs={**inputs_params, 'random_normal': random_normal},
                           outputs=samples)
       flow_spec = hub.create_module_spec(flow_module_spec)
