@@ -66,18 +66,22 @@ class LatentFlow(t2t_model.T2TModel):
       y = tf.concat([tf.expand_dims(inputs[k], axis=1) for k in hparamsp.attributes] ,axis=1)
       y = tf.layers.batch_normalization(y, name="y_norm", training=is_training)
       flow = self.normalizing_flow(y, latent_size)
-      code = tf.reshape(flow.sample(tf.shape(y)[0]), code_shape)
-      return code, flow
+      return flow
 
     if hparams.mode == tf.estimator.ModeKeys.PREDICT:
       # Export the latent flow alone
       def flow_module_spec():
-        inputs = {k: tf.placeholder(tf.float32, shape=[None]) for k in hparamsp.attributes}
-        code, _ = get_flow(inputs, is_training=False)
-        hub.add_signature(inputs=inputs, outputs=code)
+        inputs_params = {k: tf.placeholder(tf.float32, shape=[None]) for k in hparamsp.attributes}
+        random_normal = tf.placeholder(tf.float32, shape=[None, latent_size])
+        flow = get_flow(inputs_params, is_training=False)
+        samples = flow._bijector.forward(random_normal)
+        samples = tf.reshape(samples, code_shape)
+        hub.add_signature(inputs={**inputs_params, 'random_normal': random_normal},
+                          outputs=samples)
       flow_spec = hub.create_module_spec(flow_module_spec)
       flow = hub.Module(flow_spec, name='flow_module')
       hub.register_module_for_export(flow, "code_sampler")
+      cond['random_normal'] = tf.random_normal(shape=[tf.shape(cond[hparamsp.attributes[0]])[0] , latent_size])
       samples = flow(cond)
       return samples, {'loglikelihood': 0}
 
@@ -88,13 +92,13 @@ class LatentFlow(t2t_model.T2TModel):
       code = encoder(x)
 
     with tf.variable_scope("flow_module"):
-      samples, flow = get_flow(cond)
+      flow = get_flow(cond)
       loglikelihood = flow.log_prob(tf.layers.flatten(code))
 
     # This is the loglikelihood of a batch of images
     tf.summary.scalar('loglikelihood', tf.reduce_mean(loglikelihood))
     loss = - tf.reduce_mean(loglikelihood)
-    return samples, {'training': loss}
+    return code, {'training': loss}
 
 @registry.register_model
 class LatentMAF(LatentFlow):
