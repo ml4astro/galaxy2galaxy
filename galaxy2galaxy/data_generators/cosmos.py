@@ -87,6 +87,7 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
 
     bparams = cat_param['bulgefit']
     sparams = cat_param['sersicfit']
+    # Parameters for a 2 component fit
     cat_param = append_fields(cat_param, 'bulge_q', bparams[:,11])
     cat_param = append_fields(cat_param, 'bulge_beta', bparams[:,15])
     cat_param = append_fields(cat_param, 'disk_q', bparams[:,3])
@@ -95,6 +96,13 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     cat_param = append_fields(cat_param, 'bulge_flux_log10', np.where(cat_param['use_bulgefit'] ==1, np.log10(cat_param['flux'][:,1]), np.zeros(len(cat_param) )))
     cat_param = append_fields(cat_param, 'disk_hlr', cat_param['hlr'][:,2])
     cat_param = append_fields(cat_param, 'disk_flux_log10', np.where(cat_param['use_bulgefit'] ==1, np.log10(cat_param['flux'][:,2]), np.log10(cat_param['flux'][:,0])))
+
+    # Parameters for a single component fit
+    cat_param = append_fields(cat_param, 'sersic_flux_log10', np.log10(sparams[:,0]))
+    cat_param = append_fields(cat_param, 'sersic_q', sparams[:,3])
+    cat_param = append_fields(cat_param, 'sersic_hlr', sparams[:,1])
+    cat_param = append_fields(cat_param, 'sersic_n', sparams[:,2])
+    cat_param = append_fields(cat_param, 'sersic_beta', sparams[:,7])
 
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here
@@ -255,6 +263,28 @@ class Attrs2imgCosmos128(Img2imgCosmos128):
                     "attributes": None,
                     "targets": None}
     p.attributes = ['mag_auto', 'flux_radius', 'zphot']
+
+@registry.register_problem
+class Attrs2imgCosmos128Euclid(Img2imgCosmos128):
+  """
+  """
+
+  def eval_metrics(self):
+    eval_metrics = [ ]
+    return eval_metrics
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.03
+    p.img_len = 128
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+    p.attributes = ['mag_auto', 'flux_radius', 'sersic_n', 'sersic_q']
 
 @registry.register_problem
 class Attrs2imgCosmos32(Attrs2imgCosmos):
