@@ -226,7 +226,12 @@ def autoencoder_body(self, features):
                                activation=output_activation)
 
   # Optionally regularizes further the output
-  tv = tf.reduce_mean(tf.image.total_variation(reconstr))
+  # Anisotropic TV:
+  #    tv = tf.reduce_mean(tf.image.total_variation(reconstr))
+  # Isotropic TV:
+  im_dx, im_dy = tf.image.gradients(reconstr)
+  tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2), axis=[1,2,3])
+  tv = tf.reduce_mean(tv)
 
   # Apply channel-wise convolution with the PSF if requested
   # TODO: Handle multiple bands

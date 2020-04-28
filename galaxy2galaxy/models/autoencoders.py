@@ -257,7 +257,7 @@ def continuous_autoencoder_residual_128():
   hparams.hidden_size = 32
   hparams.max_hidden_size = 512
   hparams.batch_size = 32
-  hparams.bottleneck_bits = 16
+  hparams.bottleneck_bits = 64
 
   hparams.bottleneck_warmup_steps = 5000
 
