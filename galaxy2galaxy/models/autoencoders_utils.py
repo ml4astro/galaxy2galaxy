@@ -228,9 +228,9 @@ def autoencoder_body(self, features):
   # Optionally regularizes further the output
   # Anisotropic TV:
   #    tv = tf.reduce_mean(tf.image.total_variation(reconstr))
-  # Isotropic TV:
+  # Smoothed Isotropic TV:
   im_dx, im_dy = tf.image.image_gradients(reconstr)
-  tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2), axis=[1,2,3])
+  tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2 + 1e-5), axis=[1,2,3])
   tv = tf.reduce_mean(tv)
 
   # Apply channel-wise convolution with the PSF if requested
