@@ -229,7 +229,7 @@ def autoencoder_body(self, features):
   # Anisotropic TV:
   #    tv = tf.reduce_mean(tf.image.total_variation(reconstr))
   # Isotropic TV:
-  im_dx, im_dy = tf.image.gradients(reconstr)
+  im_dx, im_dy = tf.image.image_gradients(reconstr)
   tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2), axis=[1,2,3])
   tv = tf.reduce_mean(tv)
 
