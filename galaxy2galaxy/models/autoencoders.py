@@ -208,11 +208,14 @@ def continuous_autoencoder_basic():
   hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
   hparams.add_hparam("psf_convolution_pad_factor", 0.)  # Zero padding factor for convolution
 
+  # hparams related to output apodization for Fourier purposes
+  hparams.add_hparam("output_apodization", 8)  # Number of pixels at the border affected by the apodization window
+
   # hparams related to output activation
   hparams.add_hparam("output_activation", 'softplus') # either none or softplus
 
   # hparams related to additional regularization of the output
-  hparams.add_hparam("total_variation_loss", 0.) # Factor to apply to a loss penalizing the TV of the unconvolved image
+  hparams.add_hparam("total_variation_loss", 0.001) # Factor to apply to a loss penalizing the TV of the unconvolved image
 
   # hparams related to the likelihood
   hparams.add_hparam("likelihood_type", "Fourier") # Pixel or Fourier

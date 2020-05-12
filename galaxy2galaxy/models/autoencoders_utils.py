@@ -225,6 +225,16 @@ def autoencoder_body(self, features):
     reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final",
                                activation=output_activation)
 
+  # We apply an optional apodization of the output before taking the
+  if hparams.output_apodization > 0:
+    nx = reconstr.get_shape().as_list()[1]
+    alpha = 1. - 2 * hparams.output_apodization / nx
+    from scipy.signal.window import tukey
+    # Create a tukey window
+    w = tukey(nx, alpha)
+    w = np.outer(w,w).reshape((1, nx, nx,1)).astype('float32')
+    reconstr = reconstr * w
+
   # Optionally regularizes further the output
   # Anisotropic TV:
   #    tv = tf.reduce_mean(tf.image.total_variation(reconstr))
