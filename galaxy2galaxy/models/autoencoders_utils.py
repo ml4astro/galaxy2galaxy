@@ -229,7 +229,7 @@ def autoencoder_body(self, features):
   if hparams.output_apodization > 0:
     nx = reconstr.get_shape().as_list()[1]
     alpha = 1. - 2 * hparams.output_apodization / nx
-    from scipy.signal.window import tukey
+    from scipy.signal.windows import tukey
     # Create a tukey window
     w = tukey(nx, alpha)
     w = np.outer(w,w).reshape((1, nx, nx,1)).astype('float32')
