@@ -256,7 +256,7 @@ def autoencoder_body(self, features):
       raise NotImplementedError
 
     reconstr = convolve(reconstr, tf.cast(features['psf'][...,0], tf.complex64),
-                        zero_padding_factor=1.)
+                        zero_padding_factor=1)
 
   # Losses.
   losses = {
