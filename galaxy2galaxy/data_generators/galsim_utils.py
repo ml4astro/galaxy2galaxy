@@ -100,15 +100,14 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 image_key="psf/encoded",
                 format_key="psf/format",
                 channels=self.num_bands,
-                # The factor 4 here is to account for x2 zero padding, x2 interpolation
-                shape=[4*p.img_len, 4*p.img_len // 2 + 1, self.num_bands],
+                # The factor 2 here is to account for x2 interpolation
+                shape=[2*p.img_len, 2*p.img_len // 2 + 1, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="ps/encoded",
                 format_key="ps/format",
                 channels=self.num_bands,
-                # The factor 2 here is to account for x2 zero padding
                 shape=[p.img_len, p.img_len // 2 + 1],
                 dtype=tf.float32),
     }
@@ -165,10 +164,10 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     im = gal.drawImage(nx=stamp_size, ny=stamp_size, scale=pixel_scale,
                        method='no_pixel', use_true_center=False).array.astype('float32')
 
-    # Draw the Fourier domain image of the galaxy, using x2 zero padding,
+    # Draw the Fourier domain image of the galaxy, using x1 zero padding,
     # and x2 subsampling
     interp_factor=2
-    padding_factor=2
+    padding_factor=1
     Nk = stamp_size*interp_factor*padding_factor
     bounds = _BoundsI(0, Nk//2, -Nk//2, Nk//2-1)
     imCp = psf.drawKImage(bounds=bounds,

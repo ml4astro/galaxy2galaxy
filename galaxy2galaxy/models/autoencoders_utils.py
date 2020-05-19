@@ -95,8 +95,8 @@ def autoencoder_body(self, features):
       # If we have access to the PSF, we add this information to the encoder
       if hparams.encode_psf and 'psf' in features:
         psf_image = tf.expand_dims(tf.signal.irfft2d(tf.cast(psf_layer[...,0], tf.complex64)), axis=-1)
-        # Roll the image to undo the fftshift, assuming x2 zero padding and x2 subsampling
-        psf_image = tf.roll(psf_image, shift=[2*input_shape[1], 2*input_shape[2]], axis=[1,2])
+        # Roll the image to undo the fftshift, assuming x1 zero padding and x2 subsampling
+        psf_image = tf.roll(psf_image, shift=[input_shape[1], input_shape[2]], axis=[1,2])
         psf_image = tf.image.resize_with_crop_or_pad(psf_image, input_shape[1], input_shape[2])
         net_psf = tf.layers.conv2d(psf_image,
                                    hparams.hidden_size // 4, 5,
@@ -157,8 +157,8 @@ def autoencoder_body(self, features):
       # Note that we only support single band images so far...
       if hparams.encode_psf and 'psf' in features:
         psf_image = tf.expand_dims(tf.signal.irfft2d(tf.cast(features['psf'][...,0], tf.complex64)), axis=-1)
-        # Roll the image to undo the fftshift, assuming x2 zero padding and x2 subsampling
-        psf_image = tf.roll(psf_image, shift=[2*input_shape[1], 2*input_shape[2]], axis=[1,2])
+        # Roll the image to undo the fftshift, assuming x1 zero padding and x2 subsampling
+        psf_image = tf.roll(psf_image, shift=[input_shape[1], input_shape[2]], axis=[1,2])
         psf_image = tf.image.resize_with_crop_or_pad(psf_image, input_shape[1], input_shape[2])
         net_psf = tf.layers.conv2d(psf_image,
                                    hparams.hidden_size // 4, 5,
@@ -228,20 +228,26 @@ def autoencoder_body(self, features):
   # We apply an optional apodization of the output before taking the
   if hparams.output_apodization > 0:
     nx = reconstr.get_shape().as_list()[1]
-    alpha = 1. - 2 * hparams.output_apodization / nx
+    alpha = 2 * hparams.output_apodization / nx
     from scipy.signal.windows import tukey
     # Create a tukey window
     w = tukey(nx, alpha)
     w = np.outer(w,w).reshape((1, nx, nx,1)).astype('float32')
+    # We apply the window
     reconstr = reconstr * w
+    # And penalize non zero things at the border
+    apo_loss = tf.reduce_mean(tf.reduce_sum(((1.- w)*reconstr)**2, axis=[1,2,3]))
+  else:
+    w = 1.0
+    apo_loss = 0.
 
   # Optionally regularizes further the output
   # Anisotropic TV:
-  #    tv = tf.reduce_mean(tf.image.total_variation(reconstr))
+  tv = tf.reduce_mean(tf.image.total_variation(reconstr))
   # Smoothed Isotropic TV:
-  im_dx, im_dy = tf.image.image_gradients(reconstr)
-  tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2 + 1e-5), axis=[1,2,3])
-  tv = tf.reduce_mean(tv)
+  # im_dx, im_dy = tf.image.image_gradients(reconstr)
+  # tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2 + 1e-5), axis=[1,2,3])
+  # tv = tf.reduce_mean(tv)
 
   # Apply channel-wise convolution with the PSF if requested
   # TODO: Handle multiple bands
@@ -249,23 +255,25 @@ def autoencoder_body(self, features):
     if self.num_channels > 1:
       raise NotImplementedError
 
-    reconstr = convolve(reconstr, tf.cast(features['psf'][...,0], tf.complex64))
+    reconstr = convolve(reconstr, tf.cast(features['psf'][...,0], tf.complex64),
+                        zero_padding_factor=1.)
 
   # Losses.
   losses = {
       "bottleneck_extra": b_loss,
       "bottleneck_l2": hparams.bottleneck_l2_factor * xb_loss,
-      "total_variation": hparams.total_variation_loss * tv
+      "total_variation": hparams.total_variation_loss * tv,
+      "apodization_loss": hparams.apodization_loss * apo_loss,
   }
 
-  loglik = loglikelihood_fn(labels, reconstr, features, hparams)
+  loglik = loglikelihood_fn(w*labels, w*reconstr, features, hparams)
   targets_loss = tf.reduce_mean(- loglik)
 
   tf.summary.scalar("negloglik", targets_loss)
   tf.summary.scalar("bottleneck_loss", b_loss)
 
   # Compute final loss
-  losses["training"] = targets_loss + b_loss + hparams.bottleneck_l2_factor * xb_loss + hparams.total_variation_loss * tv
+  losses["training"] = targets_loss + b_loss + hparams.bottleneck_l2_factor * xb_loss + hparams.total_variation_loss * tv +  hparams.apodization_loss * apo_loss
   logits = tf.reshape(reconstr, labels_shape)
 
   image_summary("ae", reconstr)

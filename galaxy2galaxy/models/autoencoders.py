@@ -210,6 +210,7 @@ def continuous_autoencoder_basic():
 
   # hparams related to output apodization for Fourier purposes
   hparams.add_hparam("output_apodization", 8)  # Number of pixels at the border affected by the apodization window
+  hparams.add_hparam("apodization_loss", 1.0)  # Factor to penalize non zero borders
 
   # hparams related to output activation
   hparams.add_hparam("output_activation", 'softplus') # either none or softplus
