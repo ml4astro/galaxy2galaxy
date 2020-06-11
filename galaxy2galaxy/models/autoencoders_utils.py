@@ -233,21 +233,22 @@ def autoencoder_body(self, features):
     # Create a tukey window
     w = tukey(nx, alpha)
     w = np.outer(w,w).reshape((1, nx, nx,1)).astype('float32')
-    # We apply the window
-    reconstr = reconstr * w
     # And penalize non zero things at the border
     apo_loss = tf.reduce_mean(tf.reduce_sum(((1.- w)*reconstr)**2, axis=[1,2,3]))
   else:
     w = 1.0
     apo_loss = 0.
 
+  # We apply the window
+  reconstr = reconstr * w
+
   # Optionally regularizes further the output
   # Anisotropic TV:
   tv = tf.reduce_mean(tf.image.total_variation(reconstr))
   # Smoothed Isotropic TV:
-  # im_dx, im_dy = tf.image.image_gradients(reconstr)
-  # tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2 + 1e-5), axis=[1,2,3])
-  # tv = tf.reduce_mean(tv)
+  #im_dx, im_dy = tf.image.image_gradients(reconstr)
+  #tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2 + 1e-6), axis=[1,2,3])
+  #tv = tf.reduce_mean(tv)
 
   # Apply channel-wise convolution with the PSF if requested
   # TODO: Handle multiple bands
@@ -266,7 +267,7 @@ def autoencoder_body(self, features):
       "apodization_loss": hparams.apodization_loss * apo_loss,
   }
 
-  loglik = loglikelihood_fn(w*labels, w*reconstr, features, hparams)
+  loglik = loglikelihood_fn(labels, reconstr, features, hparams)
   targets_loss = tf.reduce_mean(- loglik)
 
   tf.summary.scalar("negloglik", targets_loss)
