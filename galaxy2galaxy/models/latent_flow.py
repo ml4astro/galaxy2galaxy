@@ -146,7 +146,7 @@ class LatentNSF(LatentFlow):
     for i in range(hparams.num_hidden_layers):
       chain.append(RealNVP(latent_size//2,
                           bijector_fn=ConditionalNeuralSpline(conditional_tensor=conditioning,
-                              hidden_layers=[hparams.hidden_size, hparams.hidden_size],
+                              hidden_layers=[hparams.hidden_size],
                               name='nsf_%d'%i)))
       chain.append(tfb.Permute(permutation=init_once(
                            np.arange(latent_size)[::-1].astype("int32"),
@@ -224,8 +224,8 @@ def latent_flow_nsf():
   hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
   hparams.label_smoothing = 0.0
   hparams.batch_size = 128
-  hparams.hidden_size = 256
-  hparams.num_hidden_layers = 4
+  hparams.hidden_size = 128
+  hparams.num_hidden_layers = 3
   hparams.initializer = "uniform_unit_scaling"
   hparams.initializer_gain = 1.0
   hparams.weight_decay = 0.0
