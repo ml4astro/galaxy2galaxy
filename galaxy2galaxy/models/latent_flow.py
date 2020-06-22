@@ -70,7 +70,8 @@ class LatentFlow(t2t_model.T2TModel):
       # If training, also adding some small amount of noise during training to
       # avoid too much overfitting
       if is_training:
-        y += hparams.conditioning_noise_reg * tf.random_normal(shape=y.shape)
+        yshape = y.get_shape()
+        y += hparams.conditioning_noise_reg * tf.random_normal(shape=[yshape[0].value, yshape[1].value])
 
       flow = self.normalizing_flow(y, latent_size)
       return flow
