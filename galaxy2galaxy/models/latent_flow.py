@@ -153,7 +153,7 @@ class LatentNSF(LatentFlow):
     for i in range(hparams.num_hidden_layers):
       chain.append(RealNVP(latent_size//2,
                           bijector_fn=ConditionalNeuralSpline(conditional_tensor=conditioning,
-                              hidden_layers=[hparams.hidden_size],
+                              hidden_layers=[hparams.hidden_size]*hparams.hidden_layers_per_coupling,
                               name='nsf_%d'%i)))
       chain.append(tfb.Permute(permutation=init_once(
                            np.arange(latent_size)[::-1].astype("int32"),
@@ -245,6 +245,8 @@ def latent_flow_nsf():
   hparams.kernel_height = 4
   hparams.kernel_width = 4
   hparams.dropout = 0.0
+
+  hparams.add_hparam("hidden_layers_per_coupling", 1)
 
   # hparams specifying the encoder
   hparams.add_hparam("encoder_module", "") # This needs to be overriden
