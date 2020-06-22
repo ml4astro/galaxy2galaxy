@@ -66,6 +66,12 @@ class LatentFlow(t2t_model.T2TModel):
     def get_flow(inputs, is_training=True):
       y = tf.concat([tf.expand_dims(inputs[k], axis=1) for k in hparamsp.attributes] ,axis=1)
       y = tf.layers.batch_normalization(y, name="y_norm", training=is_training)
+
+      # If training, also adding some small amount of noise during training to
+      # avoid too much overfitting
+      if is_training:
+        y += hparams.conditioning_noise_reg * tf.random_normal(shape=y.shape)
+
       flow = self.normalizing_flow(y, latent_size)
       return flow
 
@@ -184,6 +190,9 @@ def latent_flow():
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
 
+  # hparams related to the augmentation during training
+  hparams.add_hparam("conditioning_noise_reg", 0.01)
+
   return hparams
 
 
@@ -212,6 +221,9 @@ def latent_flow_larger():
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
 
+  # hparams related to the augmentation during training
+  hparams.add_hparam("conditioning_noise_reg", 0.01)
+
   return hparams
 
 @registry.register_hparams
@@ -224,8 +236,8 @@ def latent_flow_nsf():
   hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
   hparams.label_smoothing = 0.0
   hparams.batch_size = 128
-  hparams.hidden_size = 128
-  hparams.num_hidden_layers = 3
+  hparams.hidden_size = 256
+  hparams.num_hidden_layers = 4
   hparams.initializer = "uniform_unit_scaling"
   hparams.initializer_gain = 1.0
   hparams.weight_decay = 0.0
@@ -238,5 +250,8 @@ def latent_flow_nsf():
 
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+
+  # hparams related to the augmentation during training
+  hparams.add_hparam("conditioning_noise_reg", 0.01)
 
   return hparams
