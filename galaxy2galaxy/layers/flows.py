@@ -129,13 +129,13 @@ class ConditionalNeuralSpline(tf.Module):
         self._layers.append(tf.keras.layers.Dense(units, activation=self._activation,
                                                   name='layer_%d'%i))
       self._bin_widths = tf.keras.layers.Dense(
-          nunits * self._nbins, activation=self._bin_positions, name='w')
+          nunits * self._nbins, activation=_bin_positions, name='w')
 
       self._bin_heights = tf.keras.layers.Dense(
-          nunits * self._nbins, activation=self._bin_positions, name='h')
+          nunits * self._nbins, activation=_bin_positions, name='h')
 
       self._knot_slopes = tf.keras.layers.Dense(
-          nunits * (self._nbins - 1), activation=self._slopes, name='s')
+          nunits * (self._nbins - 1), activation=_slopes, name='s')
       self._built = True
 
     # If provided, we append the condition as an input to the network
