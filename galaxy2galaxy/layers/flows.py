@@ -125,7 +125,7 @@ class ConditionalNeuralSpline(tf.Module):
         x = tf.reshape(x, [-1, nunit, self._nbins - 1])
         return tf.math.softplus(x) + 1e-2
 
-      for i, units in enumerate(hidden_layers):
+      for i, units in enumerate(self._hidden_layers):
         self._layers.append(tf.keras.layers.Dense(units, activation=self._activation,
                                                   name='layer_%d'%i))
       self._bin_widths = tf.keras.layers.Dense(
