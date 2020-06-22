@@ -145,7 +145,7 @@ class LatentNSF(LatentFlow):
     chain = [tfb.Affine(scale_identity_multiplier=10)]
     for i in range(hparams.num_hidden_layers):
       chain.append(RealNVP(latent_size//2,
-                          ConditionalNeuralSpline(conditional_tensor=conditioning,
+                          bijector_fn=ConditionalNeuralSpline(conditional_tensor=conditioning,
                               hidden_layers=[hparams.hidden_size, hparams.hidden_size],
                               name='nsf_%d'%i)))
       chain.append(tfb.Permute(permutation=init_once(
