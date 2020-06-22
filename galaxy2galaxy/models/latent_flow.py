@@ -15,7 +15,8 @@ from tensor2tensor.layers import modalities
 from tensor2tensor.utils import registry
 from tensor2tensor.utils import t2t_model
 
-from galaxy2galaxy.layers.flows import masked_autoregressive_conditional_template
+from galaxy2galaxy.layers.flows import masked_autoregressive_conditional_template, ConditionalNeuralSpline
+from galaxy2galaxy.layers.tfp_utils import RealNVP
 
 import tensorflow as tf
 import tensorflow_hub as hub
@@ -129,6 +130,34 @@ class LatentMAF(LatentFlow):
             bijector=chain)
     return flow
 
+@registry.register_model
+class LatentNSF(LatentFlow):
+
+  def normalizing_flow(self, conditioning, latent_size):
+    """
+    Normalizing flow based on Neural Spline Flow.
+    """
+    hparams = self.hparams
+
+    def init_once(x, name, trainable=False):
+      return tf.get_variable(name, initializer=x, trainable=trainable)
+
+    chain = [tfb.Affine(scale_identity_multiplier=10)]
+    for i in range(hparams.num_hidden_layers):
+      chain.append(RealNVP(latent_size//2,
+                          ConditionalNeuralSpline(conditional_tensor=conditioning,
+                              hidden_layers=[hparams.hidden_size, hparams.hidden_size],
+                              name='nsf_%d'%i)))
+      chain.append(tfb.Permute(permutation=init_once(
+                           np.arange(latent_size)[::-1].astype("int32"),
+                           name='permutation%d'%i)))
+    chain.append(tfb.Affine(scale_identity_multiplier=0.1))
+    chain = tfb.Chain(chain)
+
+    flow = tfd.TransformedDistribution(distribution=tfd.MultivariateNormalDiag(loc=np.zeros(latent_size, dtype='float32'),
+                                                                               scale_diag=np.ones(latent_size, dtype='float32')),
+            bijector=chain)
+    return flow
 
 @registry.register_hparams
 def latent_flow():
@@ -170,6 +199,33 @@ def latent_flow_larger():
   hparams.batch_size = 128
   hparams.hidden_size = 256
   hparams.num_hidden_layers = 8
+  hparams.initializer = "uniform_unit_scaling"
+  hparams.initializer_gain = 1.0
+  hparams.weight_decay = 0.0
+  hparams.kernel_height = 4
+  hparams.kernel_width = 4
+  hparams.dropout = 0.0
+
+  # hparams specifying the encoder
+  hparams.add_hparam("encoder_module", "") # This needs to be overriden
+
+  # hparams related to the PSF
+  hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+
+  return hparams
+
+@registry.register_hparams
+def latent_flow_nsf():
+  """Basic autoencoder model."""
+  hparams = common_hparams.basic_params1()
+  hparams.optimizer = "adam"
+  hparams.learning_rate_constant = 0.1
+  hparams.learning_rate_warmup_steps = 1000
+  hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
+  hparams.label_smoothing = 0.0
+  hparams.batch_size = 128
+  hparams.hidden_size = 256
+  hparams.num_hidden_layers = 4
   hparams.initializer = "uniform_unit_scaling"
   hparams.initializer_gain = 1.0
   hparams.weight_decay = 0.0
