@@ -122,7 +122,7 @@ class ConditionalNeuralSpline(tf.Module):
         return tf.math.softmax(x, axis=-1) * (2 - self._nbins * 1e-2) + 1e-2
 
       def _slopes(x):
-        x = tf.reshape(x, [-1, nunit, self._nbins - 1])
+        x = tf.reshape(x, [-1, nunits, self._nbins - 1])
         return tf.math.softplus(x) + 1e-2
 
       for i, units in enumerate(self._hidden_layers):
