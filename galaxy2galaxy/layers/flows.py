@@ -181,7 +181,7 @@ def conditional_neural_spline_template(conditional_tensor=None,
 
       bin_widths = tf.layers.dense(net, nunits * nbins, activation=_bin_positions, name='w')
       bin_heights = tf.layers.dense(net, nunits * nbins, activation=_bin_positions, name='h')
-      knots_slopes = tf.layers.dense(net, nunits * (nbins - 1), activation=_bin_positions, name='s')
+      knot_slopes = tf.layers.dense(net, nunits * (nbins - 1), activation=_bin_positions, name='s')
 
       return RationalQuadraticSpline(
           bin_widths=bin_widths,
