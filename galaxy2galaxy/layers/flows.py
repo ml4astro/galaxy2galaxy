@@ -27,6 +27,7 @@ tfb = tfp.bijectors
 
 __all__ = ['masked_autoregressive_conditional_template',
            'ConditionalNeuralSpline',
+           'conditional_neural_spline_template',
            '_clip_by_value_preserve_grad']
 
 def masked_autoregressive_conditional_template(hidden_layers,
@@ -152,3 +153,39 @@ class ConditionalNeuralSpline(tf.Module):
         bin_widths=self._bin_widths(net),
         bin_heights=self._bin_heights(net),
         knot_slopes=self._knot_slopes(net))
+
+
+def conditional_neural_spline_template(conditional_tensor=None,
+                                       nbins=32,
+                                       hidden_layers=[256],
+                                       activation=tf.nn.relu,
+                                       name=None):
+  with tf.name_scope(name):
+    def _fn(x, nunits):
+      # If provided, we append the condition as an input to the network
+      if conditional_tensor is not None:
+        net = tf.concat([x, conditional_tensor], axis=-1)
+      else:
+        net = x
+
+      for i, units in enumerate(hidden_layers):
+        net = tf.layers.dense(net, units, activation=activation, name='layer_%d'%i)
+
+      def _bin_positions(x):
+        x = tf.reshape(x, [-1, nunits, nbins])
+        return tf.math.softmax(x, axis=-1) * (2 - nbins * 1e-2) + 1e-2
+
+      def _slopes(x):
+        x = tf.reshape(x, [-1, nunits, nbins - 1])
+        return tf.math.softplus(x) + 1e-2
+
+      bin_widths = tf.layers.dense(net, nunits * nbins, activation=_bin_positions, name='w')
+      bin_heights = tf.layers.dense(net, nunits * nbins, activation=_bin_positions, name='h')
+      knots_slopes = tf.layers.dense(net, nunits * (nbins - 1), activation=_bin_positions, name='s')
+
+      return RationalQuadraticSpline(
+          bin_widths=bin_widths,
+          bin_heights=bin_heights,
+          knot_slopes=knot_slopes)
+
+    return tf.make_template(name, _fn)

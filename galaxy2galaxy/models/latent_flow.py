@@ -15,7 +15,7 @@ from tensor2tensor.layers import modalities
 from tensor2tensor.utils import registry
 from tensor2tensor.utils import t2t_model
 
-from galaxy2galaxy.layers.flows import masked_autoregressive_conditional_template, ConditionalNeuralSpline
+from galaxy2galaxy.layers.flows import masked_autoregressive_conditional_template, ConditionalNeuralSpline, conditional_neural_spline_template
 from galaxy2galaxy.layers.tfp_utils import RealNVP
 
 import tensorflow as tf
@@ -145,7 +145,7 @@ class LatentNSF(LatentFlow):
     chain = [tfb.Affine(scale_identity_multiplier=10)]
     for i in range(hparams.num_hidden_layers):
       chain.append(RealNVP(latent_size//2,
-                          bijector_fn=ConditionalNeuralSpline(conditional_tensor=conditioning,
+                          bijector_fn=conditional_neural_spline_template(conditional_tensor=conditioning,
                               hidden_layers=[hparams.hidden_size]*hparams.hidden_layers_per_coupling,
                               name='nsf_%d'%i)))
       if i % 2 == 0:
