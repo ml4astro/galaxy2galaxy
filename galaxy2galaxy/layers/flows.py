@@ -28,6 +28,7 @@ tfb = tfp.bijectors
 __all__ = ['masked_autoregressive_conditional_template',
            'ConditionalNeuralSpline',
            'conditional_neural_spline_template',
+           'autoregressive_conditional_neural_spline_template',
            '_clip_by_value_preserve_grad']
 
 def masked_autoregressive_conditional_template(hidden_layers,
@@ -187,5 +188,82 @@ def conditional_neural_spline_template(conditional_tensor=None,
           bin_widths=bin_widths,
           bin_heights=bin_heights,
           knot_slopes=knot_slopes)
+
+    return tf.make_template(name, _fn)
+
+
+def autoregressive_conditional_neural_spline_template(conditional_tensor,
+                                                 hidden_layers=[256],
+                                                 nbins=32,
+                                                 activation=tf.nn.relu,
+                                                 name=None,
+                                                 *args,  # pylint: disable=keyword-arg-before-vararg
+                                                 **kwargs):
+  name = name or "autoregressive_conditional_neural_spline_template"
+  with tf.name_scope(name):
+    def _fn(x):
+      """MADE parameterized via `masked_autoregressive_default_template`."""
+      # TODO(b/67594795): Better support of dynamic shape.
+
+      input_shape = (
+          np.int32(x.shape.as_list())
+          if x.shape.is_fully_defined() else tf.shape(x))
+      if len(x.shape) == 1:
+        x = x[tf.newaxis, ...]
+
+      x = tf.concat([conditional_tensor, x],  axis=1)
+      cond_depth = conditional_tensor.shape.with_rank_at_least(1)[-1].value
+      input_depth = x.shape.with_rank_at_least(1)[-1].value
+
+      if input_depth is None:
+        raise NotImplementedError(
+            "Rightmost dimension must be known prior to graph execution.")
+
+      def _bin_positions(x):
+        x = tf.reshape(x, [-1, input_depth , nbins])
+        return tf.math.softmax(x, axis=-1) * (2 - nbins * 1e-2) + 1e-2
+
+      def _slopes(x):
+        x = tf.reshape(x, [-1, input_depth, nbins - 1])
+        return tf.math.softplus(x) + 1e-2
+
+      for i, units in enumerate(hidden_layers):
+        x = tfb.masked_dense(
+            inputs=x,
+            units=units,
+            num_blocks=input_depth,
+            exclusive=True if i == 0 else False,
+            activation=activation,
+            *args,  # pylint: disable=keyword-arg-before-vararg
+            **kwargs)
+
+      bin_widths = tfb.masked_dense(
+          inputs=x,
+          units=input_depth*nbins,
+          num_blocks=input_depth,
+          activation=_bin_positions,
+          *args,  # pylint: disable=keyword-arg-before-vararg
+          **kwargs)
+
+      bin_heights = tfb.masked_dense(
+          inputs=x,
+          units=input_depth*nbins,
+          num_blocks=input_depth,
+          activation=_bin_positions,
+          *args,  # pylint: disable=keyword-arg-before-vararg
+          **kwargs)
+
+      knot_slopes = tfb.masked_dense(
+          inputs=x,
+          units=input_depth*(nbins -1),
+          num_blocks=input_depth,
+          activation=_slopes,
+          *args,  # pylint: disable=keyword-arg-before-vararg
+          **kwargs)
+
+      return RationalQuadraticSpline(
+          bin_widths=bin_widths[:, cond_depth:],
+          bin_heights=bin_heights[:, cond_depth:],
+          knot_slopes=knot_slopes[:, cond_depth:])
 
     return tf.make_template(name, _fn)

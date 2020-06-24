@@ -15,8 +15,8 @@ from tensor2tensor.layers import modalities
 from tensor2tensor.utils import registry
 from tensor2tensor.utils import t2t_model
 
-from galaxy2galaxy.layers.flows import masked_autoregressive_conditional_template, ConditionalNeuralSpline, conditional_neural_spline_template
-from galaxy2galaxy.layers.tfp_utils import RealNVP
+from galaxy2galaxy.layers.flows import masked_autoregressive_conditional_template, ConditionalNeuralSpline, conditional_neural_spline_template, autoregressive_conditional_neural_spline_template
+from galaxy2galaxy.layers.tfp_utils import RealNVP, MaskedAutoregressiveFlow
 
 import tensorflow as tf
 import tensorflow_hub as hub
@@ -146,6 +146,41 @@ class LatentNSF(LatentFlow):
     for i in range(hparams.num_hidden_layers):
       chain.append(RealNVP(latent_size//2,
                           bijector_fn=conditional_neural_spline_template(conditional_tensor=conditioning,
+                              hidden_layers=[hparams.hidden_size]*hparams.hidden_layers_per_coupling,
+                              name='nsf_%d'%i)))
+      if i % 2 == 0:
+        chain.append(tfb.Permute(permutation=init_once(
+                           np.arange(latent_size)[::-1].astype("int32"),
+                           name='permutation%d'%i)))
+      elif i < hparams.num_hidden_layers - 1:
+        chain.append(tfb.Permute(permutation=init_once(
+                           np.random.permutation(latent_size).astype("int32"),
+                           name='permutation%d'%i)))
+
+    chain.append(tfb.Affine(scale_identity_multiplier=0.1))
+    chain = tfb.Chain(chain)
+
+    flow = tfd.TransformedDistribution(distribution=tfd.MultivariateNormalDiag(loc=np.zeros(latent_size, dtype='float32'),
+                                                                               scale_diag=np.ones(latent_size, dtype='float32')),
+            bijector=chain)
+    return flow
+
+@registry.register_model
+class LatentMafNsf(LatentFlow):
+
+  def normalizing_flow(self, conditioning, latent_size):
+    """
+    Normalizing flow based on an AutoRegressive Neural Spline Flow.
+    """
+    hparams = self.hparams
+
+    def init_once(x, name, trainable=False):
+      return tf.get_variable(name, initializer=x, trainable=trainable)
+
+    chain = [tfb.Affine(scale_identity_multiplier=10)]
+    for i in range(hparams.num_hidden_layers):
+      chain.append(MaskedAutoregressiveFlow(
+                          bijector_fn=autoregressive_conditional_neural_spline_template(conditional_tensor=conditioning,
                               hidden_layers=[hparams.hidden_size]*hparams.hidden_layers_per_coupling,
                               name='nsf_%d'%i)))
       if i % 2 == 0:
