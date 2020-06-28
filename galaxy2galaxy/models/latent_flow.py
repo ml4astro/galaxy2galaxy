@@ -118,10 +118,11 @@ class LatentMAF(LatentFlow):
       chain.append(tfb.MaskedAutoregressiveFlow(
                   shift_and_log_scale_fn=masked_autoregressive_conditional_template(
                   hidden_layers=[hparams.hidden_size, hparams.hidden_size],
-                      conditional_tensor=conditioning, shift_only= i>2,
-                      activation=common_layers.belu, name='maf%d'%i)))
+                      conditional_tensor=conditioning, shift_only=False,
+                      activation=common_layers.belu, name='maf%d'%i,
+                      log_scale_min_clip=-3., log_scale_clip_gradient=True)))
       chain.append(tfb.Permute(permutation=init_once(
-                           np.arange(latent_size)[::-1].astype("int32"),
+                           np.random.permutation(latent_size).astype("int32"),
                            name='permutation%d'%i)))
     chain = tfb.Chain(chain)
 
