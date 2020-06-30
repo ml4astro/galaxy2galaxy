@@ -45,6 +45,19 @@ class ContinuousAutoencoderResidual(autoencoders.AutoencoderResidual):
 @registry.register_model
 class ContinuousAutoencoderResidualVAE(autoencoders.AutoencoderResidualVAE):
 
+  def embed(self, x, name="embedding"):
+    """Input embedding."""
+    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+      x_shape = common_layers.shape_list(x)
+      # Merge channels and depth before embedding.
+      x = tf.reshape(x, x_shape[:-2] + [x_shape[-2] * x_shape[-1]])
+      x = tf.layers.conv2d(x, self.hparams.hidden_size, kernel_size=3,
+                           padding='SAME', activation=common_layers.belu,
+                           name="embed",
+                           bias_initializer=tf.random_normal_initializer(stddev=0.01))
+      x = common_layers.layer_norm(x, name="ln_embed")
+      return common_attention.add_timing_signal_nd(x)
+
   def encoder(self, x):
     with tf.variable_scope("encoder"):
       hparams = self.hparams
@@ -257,11 +270,11 @@ def continuous_autoencoder_residual_128():
   hparams.learning_rate_constant = 0.25
   hparams.learning_rate_warmup_steps = 500
   hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
-  hparams.num_hidden_layers = 7
-  hparams.hidden_size = 32
+  hparams.num_hidden_layers = 6
+  hparams.hidden_size = 16
   hparams.max_hidden_size = 512
-  hparams.batch_size = 32
-  hparams.bottleneck_bits = 64
+  hparams.batch_size = 128
+  hparams.bottleneck_bits = 32
 
   hparams.bottleneck_warmup_steps = 5000
 
@@ -271,7 +284,7 @@ def continuous_autoencoder_residual_128():
   hparams.add_hparam("residual_kernel_width", 3)
   hparams.add_hparam("residual_filter_multiplier", 2.0)
   hparams.add_hparam("residual_dropout", 0.1)
-  hparams.add_hparam("residual_use_separable_conv", int(True))
+  hparams.add_hparam("residual_use_separable_conv", int(False))
 
   # Weight factor for the KL term of the VAE
   hparams.add_hparam("kl_beta", 1.0)

@@ -125,8 +125,10 @@ def autoencoder_body(self, features):
       input_layer = tf.placeholder(tf.float32, shape=b_shape)
       x = self.unbottleneck(input_layer, res_size)
       x = self.decoder(x, None)
-      reconstr = tf.layers.dense(x, self.num_channels, name="autoencoder_final",
-                                 activation=output_activation)
+      reconstr = tf.layers.conv2d(res, self.num_channels,
+                                  kernel_size=3, name="autoencoder_final",
+                                  padding='SAME',
+                                  activation=output_activation)
       hub.add_signature(inputs=input_layer, outputs=reconstr)
       hub.attach_message("stamp_size", tf.train.Int64List(value=[hparams.problem_hparams.img_len]))
       hub.attach_message("pixel_size", tf.train.FloatList(value=[hparams.problem_hparams.pixel_scale]))
@@ -222,8 +224,10 @@ def autoencoder_body(self, features):
     res = x[:, :shape[1], :shape[2], :]
 
   with tf.variable_scope('decoder_module'):
-    reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final",
-                               activation=output_activation)
+    reconstr = tf.layers.conv2d(res, self.num_channels,
+                                kernel_size=3, name="autoencoder_final",
+                                padding='SAME',
+                                activation=output_activation)
 
   # We apply an optional apodization of the output before taking the
   if hparams.output_apodization > 0:
