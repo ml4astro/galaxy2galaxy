@@ -270,7 +270,7 @@ def continuous_autoencoder_residual_128():
   hparams.learning_rate_constant = 0.25
   hparams.learning_rate_warmup_steps = 500
   hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
-  hparams.num_hidden_layers = 6
+  hparams.num_hidden_layers = 7
   hparams.hidden_size = 16
   hparams.max_hidden_size = 512
   hparams.batch_size = 128
