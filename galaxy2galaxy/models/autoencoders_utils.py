@@ -124,7 +124,7 @@ def autoencoder_body(self, features):
     def make_model_spec():
       input_layer = tf.placeholder(tf.float32, shape=b_shape)
       x = self.unbottleneck(input_layer, res_size)
-      x = self.decoder(x, None)
+      res = self.decoder(x, None)
       reconstr = tf.layers.conv2d(res, self.num_channels,
                                   kernel_size=3, name="autoencoder_final",
                                   padding='SAME',
