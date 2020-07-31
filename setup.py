@@ -29,16 +29,14 @@ setup(
         'numpy',
         'astropy',
         'tensor2tensor>=1.13.4',
-        'tensorflow<2.0.0',
         'tensorflow-hub',
-        'tensorflow-datasets',
         'tensorflow-probability<0.8',
         'tensorflow-gan',
         'fits2hdf',
         'unagi>=0.1.1'
     ],
     extras_require={
-        'tensorflow': ['tensorflow>=1.13.1'],
+        'tensorflow': ['tensorflow>=1.15.0'],
         'tensorflow_gpu': ['tensorflow-gpu>=1.13.1'],
         'tensorflow-hub': ['tensorflow-hub>=0.1.1'],
         'galsim': ['galsim'],
