@@ -12,7 +12,7 @@ $ conda install -c conda-forge galsim
 ```
 G2G can then easily be installed using pip inside the environment:
 ```
-$ pip install git+https://github.com/ml4astro/pixel-cnn.git
+$ pip install git+https://github.com/ml4astro/pixel-cnn.git git+https://github.com/ml4astro/GalFlow.git
 $ pip install galaxy2galaxy
 ```
 
