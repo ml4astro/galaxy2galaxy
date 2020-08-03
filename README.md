@@ -23,7 +23,7 @@ To generate the COSMOS 25.2 sample at native pixel scale and stamp size:
 ```bash
 $ g2g-datagen --problem=img2img_cosmos --data_dir=data/img2img_cosmos
 ```
-This uses GalSim to draw postage stamps and save them in TFRecord format which can then be used for training.
+This uses GalSim to draw postage stamps and save them in TFRecord format which can then be used for training.  This assumes that you have downloaded the GalSim COSMOS sample, if that's not the case, you can dowload it with: `galsim_download_cosmos -s 25.2`
 
 To  train an autoencoder with this data:
 ```bash
