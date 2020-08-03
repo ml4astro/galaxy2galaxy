@@ -40,7 +40,7 @@ setup(
         'tensorflow': ['tensorflow>=1.15.0'],
         'tensorflow_gpu': ['tensorflow-gpu>=1.13.1'],
         'tensorflow-hub': ['tensorflow-hub>=0.1.1'],
-        'galsim': ['galsim'],
+        'galsim': ['galsim' 'galflow'],
         'tests': [
             'absl-py',
             'pytest>=3.8.0',

@@ -107,3 +107,7 @@ venv.bak/
 training/
 modules/
 data/
+notebooks
+module_gan/
+sagan_cosmos/
+notes*

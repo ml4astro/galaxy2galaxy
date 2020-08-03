@@ -30,6 +30,7 @@ from tensor2tensor.utils import t2t_model
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
+from galflow import convolve
 
 from galaxy2galaxy.layers.image_utils import pack_images
 
@@ -71,11 +72,13 @@ def autoencoder_body(self, features):
   is_training = hparams.mode == tf.estimator.ModeKeys.TRAIN
 
   output_activation = tf.nn.softplus if hparams.output_activation == 'softplus' else None
+  input_shape =  [None, ] + common_layers.shape_list(features["inputs"])[1:]
 
   if hparams.mode == tf.estimator.ModeKeys.PREDICT:
     # In predict mode, we also define TensorFlow Hub modules for all pieces of
     # the autoencoder
-    input_shape =  [None, ] + common_layers.shape_list(features["inputs"])[1:]
+    if hparams.encode_psf and 'psf' in features:
+      psf_shape =  [None, ] + common_layers.shape_list(features["psf"])[1:]
     # First build encoder spec
     def make_model_spec():
       input_layer = tf.placeholder(tf.float32, shape=input_shape)
@@ -86,12 +89,16 @@ def autoencoder_body(self, features):
 
     def make_model_spec_psf():
       input_layer = tf.placeholder(tf.float32, shape=input_shape)
-      psf_layer = tf.placeholder(tf.float32, shape=input_shape)
+      psf_layer = tf.placeholder(tf.float32, shape=psf_shape)
       x = self.embed(tf.expand_dims(input_layer, -1))
 
       # If we have access to the PSF, we add this information to the encoder
       if hparams.encode_psf and 'psf' in features:
-        net_psf = tf.layers.conv2d(psf_layer,
+        psf_image = tf.expand_dims(tf.signal.irfft2d(tf.cast(psf_layer[...,0], tf.complex64)), axis=-1)
+        # Roll the image to undo the fftshift, assuming x1 zero padding and x2 subsampling
+        psf_image = tf.roll(psf_image, shift=[input_shape[1], input_shape[2]], axis=[1,2])
+        psf_image = tf.image.resize_with_crop_or_pad(psf_image, input_shape[1], input_shape[2])
+        net_psf = tf.layers.conv2d(psf_image,
                                    hparams.hidden_size // 4, 5,
                                    padding='same', name="psf_embed_1")
         net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
@@ -147,8 +154,13 @@ def autoencoder_body(self, features):
     # Run encoder.
     with tf.variable_scope('encoder_module'):
       # If we have access to the PSF, we add this information to the encoder
+      # Note that we only support single band images so far...
       if hparams.encode_psf and 'psf' in features:
-        net_psf = tf.layers.conv2d(features['psf'],
+        psf_image = tf.expand_dims(tf.signal.irfft2d(tf.cast(features['psf'][...,0], tf.complex64)), axis=-1)
+        # Roll the image to undo the fftshift, assuming x1 zero padding and x2 subsampling
+        psf_image = tf.roll(psf_image, shift=[input_shape[1], input_shape[2]], axis=[1,2])
+        psf_image = tf.image.resize_with_crop_or_pad(psf_image, input_shape[1], input_shape[2])
+        net_psf = tf.layers.conv2d(psf_image,
                                    hparams.hidden_size // 4, 5,
                                    padding='same', name="psf_embed_1")
         net_psf = common_layers.layer_norm(net_psf, name="psf_norm")
@@ -213,24 +225,46 @@ def autoencoder_body(self, features):
     reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final",
                                activation=output_activation)
 
+  # We apply an optional apodization of the output before taking the
+  if hparams.output_apodization > 0:
+    nx = reconstr.get_shape().as_list()[1]
+    alpha = 2 * hparams.output_apodization / nx
+    from scipy.signal.windows import tukey
+    # Create a tukey window
+    w = tukey(nx, alpha)
+    w = np.outer(w,w).reshape((1, nx, nx,1)).astype('float32')
+    # And penalize non zero things at the border
+    apo_loss = tf.reduce_mean(tf.reduce_sum(((1.- w)*reconstr)**2, axis=[1,2,3]))
+  else:
+    w = 1.0
+    apo_loss = 0.
+
+  # We apply the window
+  reconstr = reconstr * w
+
+  # Optionally regularizes further the output
+  # Anisotropic TV:
+  tv = tf.reduce_mean(tf.image.total_variation(reconstr))
+  # Smoothed Isotropic TV:
+  #im_dx, im_dy = tf.image.image_gradients(reconstr)
+  #tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2 + 1e-6), axis=[1,2,3])
+  #tv = tf.reduce_mean(tv)
+
   # Apply channel-wise convolution with the PSF if requested
   # TODO: Handle multiple bands
   if hparams.apply_psf and 'psf' in features:
     if self.num_channels > 1:
       raise NotImplementedError
-    rec_padded = tf.pad(reconstr[:,:,:,0], [[0,0],
-                                            [0, int(hparams.psf_convolution_pad_factor*shape[1])],
-                                            [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
-    psf_padded = tf.pad(features['psf'][...,0], [[0,0],
-                                            [0, int(hparams.psf_convolution_pad_factor*shape[1])],
-                                            [0, int(hparams.psf_convolution_pad_factor*shape[2])]])
-    reconstr = tf.expand_dims(tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64)),axis=-1)
-    reconstr = reconstr[:, :shape[1], :shape[2], :]
+
+    reconstr = convolve(reconstr, tf.cast(features['psf'][...,0], tf.complex64),
+                        zero_padding_factor=1)
 
   # Losses.
   losses = {
       "bottleneck_extra": b_loss,
-      "bottleneck_l2": hparams.bottleneck_l2_factor * xb_loss
+      "bottleneck_l2": hparams.bottleneck_l2_factor * xb_loss,
+      "total_variation": hparams.total_variation_loss * tv,
+      "apodization_loss": hparams.apodization_loss * apo_loss,
   }
 
   loglik = loglikelihood_fn(labels, reconstr, features, hparams)
@@ -239,7 +273,8 @@ def autoencoder_body(self, features):
   tf.summary.scalar("negloglik", targets_loss)
   tf.summary.scalar("bottleneck_loss", b_loss)
 
-  losses["training"] = targets_loss
+  # Compute final loss
+  losses["training"] = targets_loss + b_loss + hparams.bottleneck_l2_factor * xb_loss + hparams.total_variation_loss * tv +  hparams.apodization_loss * apo_loss
   logits = tf.reshape(reconstr, labels_shape)
 
   image_summary("ae", reconstr)

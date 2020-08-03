@@ -24,7 +24,8 @@ def main(argv):
   def generative_model_fn():
     code = hub.Module(FLAGS.flow_module)
     decoder = hub.Module(FLAGS.decoder_module)
-    inputs = {k: tf.placeholder(tf.float32, shape=[None]) for k in code.get_input_info_dict().keys()}
+    input_info = code.get_input_info_dict()
+    inputs = {k: tf.placeholder(tf.float32, shape=input_info[k].get_shape()) for k in input_info.keys()}
     hub.add_signature(inputs=inputs, outputs=decoder(code(inputs)))
     hub.attach_message("stamp_size", decoder.get_attached_message("stamp_size", tf.train.Int64List))
     hub.attach_message("pixel_size", decoder.get_attached_message("pixel_size", tf.train.FloatList))
