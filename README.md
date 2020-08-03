@@ -7,8 +7,8 @@ learning models applied to astronomical image processing problems.
 
 We recommend users create a conda environment before installing galaxy2galaxy. This makes installing tensorflow and galsim very easy:
 ```
-$ conda install -c conda-forge galsim
 $ conda install tensorflow-gpu==1.15
+$ conda install -c conda-forge galsim
 ```
 G2G can then easily be installed using pip inside the environment:
 ```
