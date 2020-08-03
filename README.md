@@ -5,13 +5,16 @@ learning models applied to astronomical image processing problems.
 
 ## Install
 
-G2G can easily be installed using pip:
+We recommend users create a conda environment before installing galaxy2galaxy. This makes installing tensorflow and galsim very easy:
 ```
-$ pip install galaxy2galaxy[galsim]
+$ conda install -c conda-forge galsim
+$ conda install tensorflow-gpu==1.15
 ```
-
-Should the install fail because of the GalSim dependency, check the GalSim [install
-guide]( https://github.com/GalSim-developers/GalSim/blob/releases/2.1/INSTALL.md) to fix it.
+G2G can then easily be installed using pip inside the environment:
+```
+$ pip install git+https://github.com/ml4astro/pixel-cnn.git
+$ pip install galaxy2galaxy
+```
 
 ## Usage
 
