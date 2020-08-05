@@ -80,15 +80,19 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
 
         "ps/encoded": tf.FixedLenFeature((), tf.string),
         "ps/format": tf.FixedLenFeature((), tf.string),
+        
+        "image2/encoded" : tf.FixedLenFeature((), tf.string),
+        "image2/format" : tf.FixedLenFeature((), tf.string),
+        
+        "psf2/encoded" : tf.FixedLenFeature((), tf.string),
+        "psf2/format" : tf.FixedLenFeature((), tf.string),
+        
+        "ps2/encoded" : tf.FixedLenFeature((), tf.string),
+        "ps2/format" : tf.FixedLenFeature((), tf.string)
     }
     
     
-    data_fields["image2/encoded"] = tf.FixedLenFeature((), tf.string)
-    data_fields["image2/format"] = tf.FixedLenFeature((), tf.string)
-    data_fields["psf2/encoded"] = tf.FixedLenFeature((), tf.string)
-    data_fields["psf2/format"] = tf.FixedLenFeature((), tf.string)
-    data_fields["ps2/encoded"] = tf.FixedLenFeature((), tf.string)
-    data_fields["ps2/format"] = tf.FixedLenFeature((), tf.string)
+    
     
 
 
@@ -119,6 +123,28 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 channels=self.num_bands,
                 shape=[p.img_len, p.img_len // 2 + 1],
                 dtype=tf.float32),
+        
+        "inputs2": tf.contrib.slim.tfexample_decoder.Image(
+                image_key="image2/encoded",
+                format_key="image2/format",
+                channels=self.num_bands,
+                shape=[p.img_len, p.img_len, self.num_bands],
+                dtype=tf.float32),
+        
+        "psf2": tf.contrib.slim.tfexample_decoder.Image(
+                image_key="psf2/encoded",
+                format_key="psf2/format",
+                channels=self.num_bands,
+                # The factor 2 here is to account for x2 interpolation
+                shape=[2*p.img_len, 2*p.img_len // 2 + 1, self.num_bands],
+                dtype=tf.float32),
+        
+        "ps2": tf.contrib.slim.tfexample_decoder.Image(
+                image_key="ps2/encoded",
+                format_key="ps2/format",
+                channels=self.num_bands,
+                shape=[p.img_len, p.img_len // 2 + 1],
+                dtype=tf.float32)
     }
 
     if hasattr(p, 'attributes'):
@@ -266,14 +292,9 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
             "psf/encoded": [im_psf.tostring()],
             "psf/format": ["raw"],
             "ps/encoded": [ps.tostring()],
-            "ps/format": ["raw"]}
+            "ps/format": ["raw"], "image2/encoded" : [im2.tostring()], "image2/format" : ["raw"], "psf2/encoded" : [im_psf2.tostring()], "psf2/format" : ["raw"], "ps2/encoded" : [ps2.tostring()], "ps2/format" : ["raw"]}
     
-    serialized_output["image2/encoded"] = [im2.tostring()]
-    serialized_output["image2/format" = ["raw"]
-    serialized_output["psf2/encoded"] = [im_psf2.tostring()]
-    serialized_output["psf2/format"] = ["raw"]
-    serialized_output["ps2/encoded"] = [ps2.tostring()]
-    serialized_output["ps2/format"] = ["raw"]
+    
     
 
     # Adding the parameters provided
