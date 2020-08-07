@@ -202,6 +202,7 @@ class Attrs2imgCosmos(Img2imgCosmos):
     p.pixel_scale = 0.03
     p.img_len = 64
     p.example_per_shard = 1000
+    print("chien")
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
@@ -314,7 +315,7 @@ class Attrs2imgCosmos32(Attrs2imgCosmos):
 
 @registry.register_problem
 class Attrs2imgCosmosPSFEuclide(Img2imgCosmos):
-    
+  
   @property
   def dataset_splits(self):
     """Splits of data to produce and number of output shards for each.
@@ -336,10 +337,11 @@ class Attrs2imgCosmosPSFEuclide(Img2imgCosmos):
     p.img_len = 64
     p.example_per_shard = 1000
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
-                  "targets": modalities.ModalityType.IDENTITY}
-    p.vocab_size = {"inputs": None,
-                    "targets": None}
+                  "targets": modalities.ModalityType.IDENTITY, "inputs2": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None, 
+                    "targets": None, "inputs2": None}
     p.add_hparam("psf", None)
+    p.add_hparam("psf2", None)
     p.add_hparam("rotation", False)
   """ Conditional image generation problem based on COSMOS sample.
   """

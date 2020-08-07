@@ -92,9 +92,6 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
     }
     
     
-    
-    
-
 
     # Adds additional attributes to be decoded as specified in the configuration
     if hasattr(p, 'attributes'):
@@ -191,7 +188,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     
     gal = galsim.Convolve(gal, psf)
 
-    # Draw a kimage of the galaxy, just to figure out what maxk is, there might
+    # Draw a kimage of the galaxy, just to figure out what mask is, there might
     # be more efficient ways to do this though...
     bounds = _BoundsI(0, stamp_size//2, -stamp_size//2, stamp_size//2-1)
     imG = gal.drawKImage(bounds=bounds,
@@ -200,7 +197,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     mask = ~(np.fft.fftshift(imG.array, axes=0) == 0)
 
     # We draw the pixel image of the convolved image
-    im = gal.drawImage(nx=stamp_size, ny=stamp_size, scale=pixel_scale,
+    im = gal.drawImage(nx=stamp_size, ny=stamp_size,  scale=pixel_scale,
                        method='no_pixel', use_true_center=False).array.astype('float32')
 
     # Draw the Fourier domain image of the galaxy, using x1 zero padding,
@@ -219,7 +216,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     # Compute noise power spectrum, at the resolution and stamp size of target
     # image
     ps = gal.noise._get_update_rootps((stamp_size, stamp_size),
-                                       wcs=galsim.PixelScale(pixel_scale))
+                                           wcs=galsim.PixelScale(pixel_scale))
 
     # The following comes from correlatednoise.py
     rt2 = np.sqrt(2.)
@@ -241,7 +238,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     
     # Draw a kimage of the galaxy, just to figure out what maxk is, there might
     # be more efficient ways to do this though...
-    bounds2 = _BoundsI(0, stamp_size//2, -stamp_size//2, stamp_size//2-1)
+    bounds = _BoundsI(0, stamp_size//2, -stamp_size//2, stamp_size//2-1)
     imG2 = gal2.drawKImage(bounds=bounds,
                          scale=2.*np.pi/(stamp_size * pixel_scale),
                          recenter=False)
@@ -253,24 +250,23 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
 
     # Draw the Fourier domain image of the galaxy, using x1 zero padding,
     # and x2 subsampling
-    interp_factor=2
-    padding_factor=1
-    Nk = stamp_size*interp_factor*padding_factor
-    bounds2 = _BoundsI(0, Nk//2, -Nk//2, Nk//2-1)
-    imCp2 = psf.drawKImage(bounds=bounds2,
+    bounds = _BoundsI(0, Nk//2, -Nk//2, Nk//2-1)
+    imCp2 = psf.drawKImage(bounds=bounds,
                          scale=2.*np.pi/(Nk * pixel_scale / interp_factor),
                          recenter=False)
 
     # Transform the psf array into proper format, remove the phase
     im_psf2 = np.abs(np.fft.fftshift(imCp2.array, axes=0)).astype('float32')
 
+
     # Compute noise power spectrum, at the resolution and stamp size of target
     # image
+    
     ps2 = gal2.noise._get_update_rootps((stamp_size, stamp_size),
                                        wcs=galsim.PixelScale(pixel_scale))
+    
 
     # The following comes from correlatednoise.py
-    rt2 = np.sqrt(2.)
     shape = (stamp_size, stamp_size)
     ps2[0, 0] = rt2 * ps2[0, 0]
     # Then make the changes necessary for even sized arrays
@@ -283,8 +279,10 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
             ps2[shape[0] // 2, shape[1] // 2] = rt2 * \
                 ps2[shape[0] // 2, shape[1] // 2]
 
-    # Apply mask to power spectrum so that it is very large outside maxk
+    # Apply mask to power spectrum so that it is very large outside mask
+
     ps2 = np.where(mask2, np.log(ps2**2), 10).astype('float32')
+
     
     
     serialized_output = {"image/encoded": [im.tostring()],
@@ -293,6 +291,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
             "psf/format": ["raw"],
             "ps/encoded": [ps.tostring()],
             "ps/format": ["raw"], "image2/encoded" : [im2.tostring()], "image2/format" : ["raw"], "psf2/encoded" : [im_psf2.tostring()], "psf2/format" : ["raw"], "ps2/encoded" : [ps2.tostring()], "ps2/format" : ["raw"]}
+    
     
     
     
