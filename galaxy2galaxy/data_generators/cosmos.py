@@ -202,7 +202,6 @@ class Attrs2imgCosmos(Img2imgCosmos):
     p.pixel_scale = 0.03
     p.img_len = 64
     p.example_per_shard = 1000
-    print("chien")
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
@@ -311,11 +310,11 @@ class Attrs2imgCosmos32(Attrs2imgCosmos):
                     "targets": None}
     p.attributes = ['mag_auto', 'flux_radius', 'zphot', 'bulge_q', 'bulge_beta' ,
                     'disk_q', 'disk_beta', 'bulge_hlr', 'disk_hlr']
-  
+
 
 @registry.register_problem
 class Attrs2imgCosmosPSFEuclide(Img2imgCosmos):
-  
+
   @property
   def dataset_splits(self):
     """Splits of data to produce and number of output shards for each.
@@ -330,7 +329,7 @@ class Attrs2imgCosmosPSFEuclide(Img2imgCosmos):
         "split": problem.DatasetSplit.EVAL,
         "shards": 1,
     }]
-    
+
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = 0.1
@@ -338,7 +337,7 @@ class Attrs2imgCosmosPSFEuclide(Img2imgCosmos):
     p.example_per_shard = 1000
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY, "inputs2": modalities.ModalityType.IDENTITY}
-    p.vocab_size = {"inputs": None, 
+    p.vocab_size = {"inputs": None,
                     "targets": None, "inputs2": None}
     p.add_hparam("psf", None)
     p.add_hparam("psf2", None)
@@ -418,4 +417,3 @@ class Attrs2imgCosmosPSFEuclide(Img2imgCosmos):
                                                stamp_size=p.img_len,
                                                pixel_scale=p.pixel_scale,
                                                attributes=attributes)
-  
