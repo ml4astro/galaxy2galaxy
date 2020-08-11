@@ -45,4 +45,5 @@ $ g2g-trainer --data_dir=data/img2img_cosmos --output_dir=training/cosmos_ae   -
 
 ## Publications making use of Galaxy2Galaxy
 
-  - [*Deep Generative Models for Galaxy Image Simulations*, Lanusse, Mandelbaum, Ravanbakhsh, Li, Freeman, and Poczos (2020)](https://arxiv.org/abs/2008.03833)
+  - [*Deep Generative Models for Galaxy Image Simulations*, Lanusse, Mandelbaum, Ravanbakhsh, Li, Freeman, and Poczos (2020)](https://arxiv.org/abs/2008.03833)  
+   [![github](https://badgen.net/badge/icon/github?icon=github&label)](https://github.com/McWilliamsCenter/deep_galaxy_models) [![arXiv:2008.03833](https://img.shields.io/badge/astro--ph.IM-arXiv%3A2008.03833-B31B1B.svg)](https://arxiv.org/abs/2008.03833)
