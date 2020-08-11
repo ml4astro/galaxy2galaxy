@@ -13,7 +13,7 @@ Current features:
     - PixelCNN
     - Normalizing Flows
     
-Note that **G2G is still under development**, additional feature/dataset suggestions are most welcome, all contributions are most welcome. 
+Note that **G2G is still under development**, additional feature/dataset suggestions are most welcome, all contributions are most welcome. Don't hesitate to join the [gitter](https://gitter.im/ml4astro/galaxy2galaxy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) room for any questions!
 
 ## Install
 
