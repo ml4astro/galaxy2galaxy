@@ -45,5 +45,4 @@ $ g2g-trainer --data_dir=data/img2img_cosmos --output_dir=training/cosmos_ae   -
 
 ## Publications making use of Galaxy2Galaxy
 
-The following publications are making use of the G2G framework:
   - [*Deep Generative Models for Galaxy Image Simulations*, Lanusse, Mandelbaum, Ravanbakhsh, Li, Freeman, and Poczos (2020)](https://arxiv.org/abs/2008.03833)
