@@ -14,7 +14,7 @@ from tensor2tensor.layers import common_layers
 from tensor2tensor.layers import modalities
 from tensor2tensor.utils import registry
 from tensor2tensor.utils import t2t_model
-from pixel_cnn_pp.model import model_spec
+# from pixel_cnn_pp.model import model_spec
 
 import tensorflow as tf
 import tensorflow_probability as tfp

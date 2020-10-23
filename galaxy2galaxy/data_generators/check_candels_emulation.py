@@ -5,7 +5,7 @@ import numpy as np
 Modes = tf.estimator.ModeKeys
 
 candels = problems.problem('attrs2img_candels_goods64_euclid')
-dset = candels.dataset(Modes.TRAIN, data_dir='/data57/hbretonniere/datasets/test_candels')
+dset = candels.dataset(Modes.TRAIN, data_dir='/data57/hbretonniere/datasets/candels_for_g2g/test_candels')
 batch = dset.batch(1)
 
 print("data set :", dset, "\n \n")

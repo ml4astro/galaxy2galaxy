@@ -49,7 +49,7 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     p = defaults
     p.pixel_scale = 0.03
     p.img_len = 64
-    p.example_per_shard = 1000
+
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
@@ -64,9 +64,10 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
 
   def generator(self, data_dir, tmp_dir, dataset_split, task_id=-1):
     """
-    Generates and yields postage stamps obtained with GalSim.
+    Generates and yields poattrs2img_cosmos64_euclid_pixscale_1_wmorpho_2stage stamps obtained with GalSim.
     """
     p = self.get_hparams()
+
     try:
         # try to use default galsim path to the data
         catalog = galsim.COSMOSCatalog()
@@ -87,6 +88,7 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
 
     bparams = cat_param['bulgefit']
     sparams = cat_param['sersicfit']
+    # Parameters for a 2 component fit
     cat_param = append_fields(cat_param, 'bulge_q', bparams[:,11])
     cat_param = append_fields(cat_param, 'bulge_beta', bparams[:,15])
     cat_param = append_fields(cat_param, 'disk_q', bparams[:,3])
@@ -96,8 +98,37 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     cat_param = append_fields(cat_param, 'disk_hlr', cat_param['hlr'][:,2])
     cat_param = append_fields(cat_param, 'disk_flux_log10', np.where(cat_param['use_bulgefit'] ==1, np.log10(cat_param['flux'][:,2]), np.log10(cat_param['flux'][:,0])))
 
+    # Parameters for a single component fit
+    cat_param = append_fields(cat_param, 'sersic_flux_log10', np.log10(sparams[:,0]))
+    cat_param = append_fields(cat_param, 'sersic_q', sparams[:,3])
+    cat_param = append_fields(cat_param, 'sersic_hlr', sparams[:,1])
+    cat_param = append_fields(cat_param, 'sersic_n', sparams[:,2])
+    cat_param = append_fields(cat_param, 'sersic_beta', sparams[:,7])
+
+    passed = 0
+    
+    late = 0
+    irr = 0
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here
+#       if cat_param['Mph3'][ind] not in [1,2,3] :
+#             passed += 1
+#             continue
+
+#       if cat_param['Mph3'][ind] == 2:
+#         if late >= 85 :
+#             if ind % 200 == 0:
+#                 print("done all the late of the id")
+#             continue
+#         late += 1
+      
+#       if cat_param['Mph3'][ind] == 3:
+#         if irr >= 85 :
+#             if ind % 200 == 0:
+#                 print("done all the irr of the id")
+#             continue
+#         irr += 1
+        
       gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
 
       # We apply the orginal psf if a different PSF is not requested
@@ -106,12 +137,12 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
       else:
           psf = p.psf
 
-      # Apply random rotation if requested
-      if hasattr(p, "rotation") and p.rotation:
-        rotation_angle = galsim.Angle(-np.random.rand()* 2 * np.pi,
+      # Apply rotation so that the galaxy is at 0 PA
+#       if hasattr(p, "rotation") and p.rotation:
+      rotation_angle = galsim.Angle(-cat_param[ind]['sersic_beta'],
                                       galsim.radians)
-        gal = gal.rotate(rotation_angle)
-        psf = psf.rotate(rotation_angle)
+      gal = gal.rotate(rotation_angle)
+      psf = psf.rotate(rotation_angle)
 
       # We save the corresponding attributes for this galaxy
       if hasattr(p, 'attributes'):
@@ -216,6 +247,7 @@ class Img2imgCosmos32(Img2imgCosmos):
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
                     "targets": None}
+    
 
 @registry.register_problem
 class Img2imgCosmos128(Img2imgCosmos):
@@ -227,6 +259,23 @@ class Img2imgCosmos128(Img2imgCosmos):
     p = defaults
     p.pixel_scale = 0.03
     p.img_len = 128
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "targets": None}
+
+
+@registry.register_problem
+class Img2imgCosmos64(Img2imgCosmos):
+  """ Smaller version of the Img2imgCosmos problem, at half the pixel
+  resolution
+  """
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.1
+    p.img_len = 64
     p.example_per_shard = 1000
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
@@ -255,6 +304,74 @@ class Attrs2imgCosmos128(Img2imgCosmos128):
                     "attributes": None,
                     "targets": None}
     p.attributes = ['mag_auto', 'flux_radius', 'zphot']
+
+@registry.register_problem
+class Attrs2imgCosmos128Euclid(Img2imgCosmos128):
+  """
+  """
+
+  def eval_metrics(self):
+    eval_metrics = [ ]
+    return eval_metrics
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.1
+    p.img_len = 128
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+    p.attributes = ['mag_auto', 'flux_radius', 'sersic_n', 'sersic_q']
+    
+@registry.register_problem
+class Attrs2imgCosmos64Euclid(Img2imgCosmos128):
+  """
+  """
+
+  def eval_metrics(self):
+    eval_metrics = [ ]
+    return eval_metrics
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.1
+    p.img_len = 64
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+#     p.attributes = ['mag_auto', 'flux_radius', 'sersic_n', 'sersic_q']
+    p.attributes = ['flux_radius', 'sersic_n', 'sersic_q']
+
+@registry.register_problem
+class Attrs2imgCosmos64EuclidWithMorpho(Img2imgCosmos128):
+  """
+  """
+
+  def eval_metrics(self):
+    eval_metrics = [ ]
+    return eval_metrics
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = 0.1
+    p.img_len = 64
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+    p.attributes = ['mag_auto', 'flux_radius', 'sersic_n', 'sersic_q', 'Mph3']
+    
 
 @registry.register_problem
 class Attrs2imgCosmos32(Attrs2imgCosmos):

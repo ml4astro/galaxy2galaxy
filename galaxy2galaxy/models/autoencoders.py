@@ -247,16 +247,16 @@ def continuous_autoencoder_residual_128():
   hparams = continuous_autoencoder_basic()
   hparams.optimizer = "Adafactor"
   hparams.clip_grad_norm = 1.0
-  hparams.learning_rate_constant = 0.25
+  hparams.learning_rate_constant = 0.35
   hparams.learning_rate_warmup_steps = 500
   hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
-  hparams.num_hidden_layers = 7
-  hparams.hidden_size = 32
-  hparams.max_hidden_size = 512
-  hparams.batch_size = 32
+  hparams.num_hidden_layers = 6
+  hparams.hidden_size = 64
+  hparams.max_hidden_size = 1024
+  hparams.batch_size = 64
   hparams.bottleneck_bits = 32
 
-  hparams.bottleneck_warmup_steps = 5000
+  hparams.bottleneck_warmup_steps = 2000
 
   hparams.add_hparam("autoregressive_decode_steps", 0)
   hparams.add_hparam("num_residual_layers", 2)
