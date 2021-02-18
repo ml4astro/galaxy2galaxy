@@ -919,7 +919,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
 
 @registry.register_problem
-class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsEuclid):
+class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsMultires):
   """
   """
 
