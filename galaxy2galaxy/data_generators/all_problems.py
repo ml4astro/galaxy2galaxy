@@ -14,7 +14,7 @@ MODULES = [
 try:
   import galsim
   MODULES += ["galaxy2galaxy.data_generators.cosmos"]
-#   MODULES += ["galaxy2galaxy.data_generators.candels"]
+  MODULES += ["galaxy2galaxy.data_generators.candels"]
 except:
   print("Could not import GalSim, excluding some data generators")
 
