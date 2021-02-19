@@ -817,7 +817,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 "image/format": ["raw"],
                 "psf/encoded": [im_psf.astype('float32').tostring()],
                 "psf/format": ["raw"],
-                "sigma_noise/encoded": [sigmas.astype('float32').tostring()],
+                "sigma_noise/encoded": [sigmas_array.astype('float32').tostring()],
                 "sigma_noise/format": ["raw"],
                 "field/encoded": [field_info.astype('float32').tostring()],
                 "field/format": ["raw"]}
