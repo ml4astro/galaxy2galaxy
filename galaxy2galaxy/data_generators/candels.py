@@ -811,8 +811,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 sigmas_array = []
                 for res in p.resolutions:
                     sigmas_array += sigmas[res]
-                sigmas_array = np.array(sigmas)
-                print(sigmas_array)
+                sigmas_array = np.array(sigmas_array)
 
                 ''' Create the output to match T2T format '''
                 serialized_output = {"image/encoded": [im.astype('float32').tostring()],
