@@ -25,6 +25,7 @@ from astropy.visualization import make_lupton_rgb
 import h5py
 import glob
 import os
+import sys
 from skimage.transform import resize
 from scipy.ndimage import binary_dilation  # type: ignore
 from astropy.table import Table
