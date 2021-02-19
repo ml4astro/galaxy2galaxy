@@ -778,7 +778,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                             
                     ''' Resize the image to the low resolution'''
                     new_size = np.ceil(128/scalings[res])+1
-                    im_tmp = resize(im_tmp, new_size, new_size, len(p.filters[res]))
+                    im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
 
                     ''' Resize the image to the highest resolution to get consistent array sizes'''
                     im_tmp = resize(im_tmp, (np.ceil(new_size/(target_pixel_scale/p.pixel_scale[res]))+1, np.ceil(new_size/(target_pixel_scale/p.pixel_scale[res]))+1, len(p.filters[res])))
