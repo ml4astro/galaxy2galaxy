@@ -767,6 +767,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 for res in p.resolutions:
                     im_tmp = np.zeros((128, 128, len(p.filters[res])))
                     for n_filter, filt in enumerate(p.filters[res]):
+                        print(n_filter)
                         # try :
                         ''' Open the image corresponding to the index of the current galaxy'''
 
@@ -774,7 +775,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                         if np.max(fits.open(tmp_file)[0].data) == 0.:
                             sigmas[res][n_filter] = 10
                         im_import = fits.open(tmp_file)[0].data
-                        im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5)
+                        im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1)
 
                         # except Exception:
                         #     print('Galaxy not seen in every filter')
@@ -811,6 +812,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 for res in p.resolutions:
                     sigmas_array += sigmas[res]
                 sigmas_array = np.array(sigmas)
+                print(sigmas_array)
 
                 ''' Create the output to match T2T format '''
                 serialized_output = {"image/encoded": [im.astype('float32').tostring()],
