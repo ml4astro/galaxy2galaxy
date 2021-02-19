@@ -690,8 +690,8 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.img_len = 128
-    p.sigmas_dic = {"high" : [1e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
-    p.filters_dic = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
+    p.sigmas = {"high" : [1e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
+    p.filters = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
     p.resolutions = ["high","low"]
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
@@ -931,8 +931,8 @@ class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsMultires):
     p = defaults
     p.pixel_scale = {'high' : 0.1, 'low' : 0.3}
     p.img_len = 64
-    p.sigmas_dic = {"high" : [1e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
-    p.filters_dic = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
+    p.sigmas = {"high" : [1e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
+    p.filters = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
     p.resolutions = ["high","low"]
     p.example_per_shard = 5
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
@@ -958,8 +958,8 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
     p = defaults
     p.pixel_scale = {'high' : 0.1, 'low' : 0.3}
     p.img_len = 64
-    p.sigmas_dic = {"high" : [3.4e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
-    p.filters_dic = {"high" : ['acs_f775w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
+    p.sigmas = {"high" : [3.4e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
+    p.filters = {"high" : ['acs_f775w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
     p.resolutions = ["high","low"]
     p.example_per_shard = 5
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
