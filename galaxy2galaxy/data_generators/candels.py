@@ -756,10 +756,12 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             if gal == index :     # To take care of the redudency inside the cat
                 continue
             index = gal
+            print(index)
 
             try:
                 ''' Loop on the filters '''
-                im = np.zeros((128, 128, band_num))
+                target_size = np.ceil(128/scalings[res])+1
+                im = np.zeros((target_size, target_size, band_num))
 
                 k = 0
                 for res in p.resolutions:
@@ -783,7 +785,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
 
                     ''' Resize the image to the highest resolution to get consistent array sizes'''
-                    im_tmp = resize(im_tmp, (np.ceil(128/target_scaling)+1, np.ceil(18/target_scaling)+1, len(p.filters[res])))
+                    im_tmp = resize(im_tmp, (target_size, target_size, len(p.filters[res])))
 
                     im[:,:,k:k+len(p.filters[res])] = im_tmp
                 
@@ -1030,7 +1032,6 @@ def mask_out_pixels(img, segmap, segval,
     # Create binary mask of the central galaxy
     central_source = binary_dilation(np.where(segmap == segval, 1, 0),
                                      iterations=n_iter)
-    print("Flux fraction : ",np.sum(img[np.where(segmap == segval)])/np.sum(img[central_source]))
     # Compute the binary mask of all sources BUT the central galaxy
     sources_except_central = np.logical_xor(sources, central_source)
 
