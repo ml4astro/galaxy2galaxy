@@ -717,6 +717,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     for res in p.resolutions:
         scalings[res] = p.pixel_scale[res]/0.06
     target_pixel_scale = np.min([p.pixel_scale[res] for res in p.resolutions])
+    target_scaling = target_pixel_scale/0.06
     
     '''Load the catalogue containing every fields and every filter'''
     all_cat = Table.read(os.path.join(data_dir, 'CANDELS_morphology_v8_3dhst_galfit_ALLFIELDS.fit'))
@@ -782,7 +783,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
 
                     ''' Resize the image to the highest resolution to get consistent array sizes'''
-                    im_tmp = resize(im_tmp, (np.ceil(new_size/(target_pixel_scale/p.pixel_scale[res]))+1, np.ceil(new_size/(target_pixel_scale/p.pixel_scale[res]))+1, len(p.filters[res])))
+                    im_tmp = resize(im_tmp, (np.ceil(128/target_scaling)+1, np.ceil(18/target_scaling)+1, len(p.filters[res])))
 
                     im[:,:,k:k+len(p.filters[res])] = im_tmp
                 
