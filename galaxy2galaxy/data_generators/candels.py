@@ -808,7 +808,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 field_info = np.asarray(n_field)
 
                 sigmas_array = []
-                for res in resolutions:
+                for res in p.resolutions:
                     sigmas_array += sigmas[res]
                 sigmas_array = np.array(sigmas)
 
