@@ -760,7 +760,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
             try:
                 ''' Loop on the filters '''
-                target_size = np.ceil(128/scalings[res])+1
+                target_size = int(np.ceil(128/scalings[res])+1)
                 im = np.zeros((target_size, target_size, band_num))
 
                 k = 0
