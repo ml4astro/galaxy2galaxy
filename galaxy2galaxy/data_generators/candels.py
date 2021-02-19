@@ -729,7 +729,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
         cube_psf_tmp = np.zeros((167, 167, len(p.filters[res])))
         for i, filt in enumerate(p.filters[res]):
             cube_psf_tmp[:, :, i] = fits.open(data_dir + '/psfs/psf_' + filt +'.fits')[0].data
-        cube_psf_tmp = resize(cube_psf_tmp, (np.ceil(128/scalings[res])+1, np.ceil(128/scalings[res])+1,len(p.filters[res])))
+        cube_psf_tmp = resize(cube_psf_tmp, 167,167,len(p.filters[res]))
         cube_psf[:,:,k:k+len(p.filters[res])] = cube_psf_tmp
 
         k += len(p.filters[res])
