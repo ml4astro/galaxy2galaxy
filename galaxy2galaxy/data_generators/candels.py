@@ -789,6 +789,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     im_tmp = resize(im_tmp, (target_size, target_size, len(p.filters[res])))
 
                     im[:,:,k:k+len(p.filters[res])] = im_tmp
+                    k += len(p.filters[res])
                 
                 im = _resize_image(im, p.img_len)
                 
