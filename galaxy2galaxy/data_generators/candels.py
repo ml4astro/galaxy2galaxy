@@ -718,7 +718,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     target_pixel_scale = np.min([p.pixel_scale[res] for res in p.resolutions])
     
     '''Load the catalogue containing every fields and every filter'''
-    all_cat = Table.read(os.path.join(tmp_dir, 'CANDELS_morphology_v8_3dhst_galfit_ALLFIELDS.fit'))
+    all_cat = Table.read(os.path.join(data_dir, 'CANDELS_morphology_v8_3dhst_galfit_ALLFIELDS.fit'))
     all_cat['FIELD_1'][np.where(all_cat['FIELD_1']=='gdn   ')] = 'GDN'
     all_cat['FIELD_1'][np.where(all_cat['FIELD_1']=='GDS   ')] = 'GDS'
     
@@ -728,7 +728,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     for res in p.resolutions:
         cube_psf_tmp = np.zeros((167, 167, len(p.filters[res])))
         for i, filt in enumerate(p.filters[res]):
-            cube_psf_tmp[:, :, i] = fits.open(tmp_dir + '/psfs/psf_' + filt +'.fits')[0].data
+            cube_psf_tmp[:, :, i] = fits.open(data_dir + '/psfs/psf_' + filt +'.fits')[0].data
         cube_psf_tmp = resize(cube_psf_tmp, (np.ceil(128/scalings[res])+1, np.ceil(128/scalings[res])+1,len(p.filters[res])))
         cube_psf[:,:,k:k+len(p.filters[res])] = cube_psf_tmp
 
@@ -766,7 +766,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                         # try :
                         ''' Open the image corresponding to the index of the current galaxy'''
 
-                        tmp_file = glob.glob(os.path.join(tmp_dir, field, filt)+'/galaxy_'+str(index)+'_*')[0]
+                        tmp_file = glob.glob(os.path.join(data_dir, field, filt)+'/galaxy_'+str(index)+'_*')[0]
                         if np.max(fits.open(tmp_file)[0].data) == 0.:
                             sigmas[n_filter] = 10
                         im_import = fits.open(tmp_file)[0].data
