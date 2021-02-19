@@ -737,7 +737,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     
     im_psf = _resize_image(cube_psf, p.img_len)
     
-    sigmas = np.asarray(p.sigmas)
+    sigmas = p.sigmas
 
     # Step 2: Extract postage stamps, resize them to requested size
     ''' Loop on the two fields'''
@@ -769,7 +769,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
                         tmp_file = glob.glob(os.path.join(data_dir, field, filt)+'/galaxy_'+str(index)+'_*')[0]
                         if np.max(fits.open(tmp_file)[0].data) == 0.:
-                            sigmas[n_filter] = 10
+                            sigmas[res][n_filter] = 10
                         im_import = fits.open(tmp_file)[0].data
                         im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5)
 
@@ -803,6 +803,11 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 
                 ''' Add a flag corresponding to the field '''
                 field_info = np.asarray(n_field)
+
+                sigmas_array = []
+                for res in resolutions:
+                    sigmas_array += sigmas[res]
+                sigmas_array = np.array(sigmas)
 
                 ''' Create the output to match T2T format '''
                 serialized_output = {"image/encoded": [im.astype('float32').tostring()],
