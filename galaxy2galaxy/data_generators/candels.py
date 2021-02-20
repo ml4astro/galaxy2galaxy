@@ -750,6 +750,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
         
         ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
         sub_cat = all_cat[np.where(all_cat["FIELD_1"]==field)[0]]
+        print("Expected number of galaxies : ",np.unique(subcat['RB_ID']))
         
         ''' Loop on all the galaxies of the field '''
         for gal in sub_cat['RB_ID']:
