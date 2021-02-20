@@ -750,8 +750,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
         
         ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
         sub_cat = all_cat[np.where(all_cat["FIELD_1"]==field)[0]]
-        print("Expected number of galaxies : ",np.unique(subcat['RB_ID']))
-        
+
         ''' Loop on all the galaxies of the field '''
         for gal in sub_cat['RB_ID']:
             if gal == index :     # To take care of the redudency inside the cat
@@ -946,7 +945,7 @@ class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsMultires):
     p.sigmas = {"high" : [1e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
     p.filters = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
     p.resolutions = ["high","low"]
-    p.example_per_shard = 5
+    p.example_per_shard = 1000
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
@@ -973,7 +972,7 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
     p.sigmas = {"high" : [3.4e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
     p.filters = {"high" : ['acs_f775w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
     p.resolutions = ["high","low"]
-    p.example_per_shard = 5
+    p.example_per_shard = 1000
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
