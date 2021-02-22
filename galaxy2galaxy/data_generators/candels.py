@@ -753,7 +753,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
         ''' Loop on all the galaxies of the field '''
         for gal in sub_cat['RB_ID']:
-            if gal == index :     # To take care of the redudency inside the cat
+            if gal == index or galaxy == 15431 :     # To take care of the redudency inside the cat
                 continue
             index = gal
             print(index)
@@ -775,7 +775,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                         if np.max(fits.open(tmp_file)[0].data) == 0.:
                             sigmas[res][n_filter] = 10
                         im_import = fits.open(tmp_file)[0].data
-                        im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1)
+                        im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5)
 
                         # except Exception:
                         #     print('Galaxy not seen in every filter')
