@@ -716,8 +716,9 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     scalings = {}
     for res in p.resolutions:
         scalings[res] = p.pixel_scale[res]/p.base_pixel_scale[res]
-    target_pixel_scale = np.min([p.pixel_scale[res] for res in p.resolutions])
-    target_scaling = target_pixel_scale/p.base_pixel_scale["high"]
+    target_pixel_scale = p.pixel_scale[p.resolutions[0]]
+    target_scaling = target_pixel_scale/p.base_pixel_scale[p.resolutions[0]]
+    print("scalings and all ",scalings,target_pixel_scale,target_scaling)
     
     '''Load the catalogue containing every fields and every filter'''
     all_cat = Table.read(os.path.join(data_dir, 'CANDELS_morphology_v8_3dhst_galfit_ALLFIELDS.fit'))
@@ -753,21 +754,22 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
         ''' Loop on all the galaxies of the field '''
         for gal in sub_cat['RB_ID']:
-            if gal == index or galaxy == 15431 :     # To take care of the redudency inside the cat
+            if gal == index or gal == 15431 :     # To take care of the redudency inside the cat
                 continue
             index = gal
             print(index)
 
             try:
                 ''' Loop on the filters '''
-                target_size = int(np.ceil(128/scalings[p.resolutions[0]])+1)
+                target_size = int(np.ceil(128/target_scaling)+1)
+                print("target ",target_size)
                 im = np.zeros((target_size, target_size, band_num))
 
                 k = 0
                 for res in p.resolutions:
                     im_tmp = np.zeros((128, 128, len(p.filters[res])))
                     for n_filter, filt in enumerate(p.filters[res]):
-                        print(n_filter)
+                        print(filt)
                         # try :
                         ''' Open the image corresponding to the index of the current galaxy'''
 
@@ -969,7 +971,7 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = {'high' : 0.1, 'low' : 0.3}
-    p.base_pixel_scale = {'high' : 0.03,'low' : 0.13}
+    p.base_pixel_scale = {'high' : 0.05,'low' : 0.13}
     p.img_len = 64
     p.sigmas = {"high" : [3.4e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
     p.filters = {"high" : ['acs_f775w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
