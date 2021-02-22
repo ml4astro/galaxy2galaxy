@@ -776,7 +776,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                         if np.max(fits.open(tmp_file)[0].data) == 0.:
                             sigmas[res][n_filter] = 10
                         im_import = fits.open(tmp_file)[0].data
-                        im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5)
+                        im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5,noise_level=p.sigmas[res][n_filter])
 
                         # except Exception:
                         #     print('Galaxy not seen in every filter')
@@ -942,7 +942,7 @@ class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsMultires):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = {'high' : 0.1, 'low' : 0.3}
-    p.base_pixel_scale = {'high' : 0.03,'low' : 0.13}
+    p.base_pixel_scale = {'high' : 0.06,'low' : 0.06}
     p.img_len = 64
     p.sigmas = {"high" : [1e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
     p.filters = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
@@ -970,9 +970,9 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = {'high' : 0.1, 'low' : 0.3}
-    p.base_pixel_scale = {'high' : 0.05,'low' : 0.13}
+    p.base_pixel_scale = {'high' : 0.06,'low' : 0.06}
     p.img_len = 64
-    p.sigmas = {"high" : [3.4e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
+    p.sigmas = {"high" : [0.017380157011262], "low" : [0.003954237367399534, 0.003849901319445, 0.004017507500562]}
     p.filters = {"high" : ['acs_f775w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
     p.resolutions = ["high","low"]
     p.example_per_shard = 1000
@@ -1059,7 +1059,7 @@ def mask_out_pixels(img, segmap, segval,
         
     return masked_img.astype(img.dtype), sources, background_mask, central_source, sources_except_central
 
-def clean_rotate_stamp(img, eps=5, sigma_sex=2):
+def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
 
     ''' Sex for clean'''
     img = img.byteswap().newbyteorder()
@@ -1082,8 +1082,16 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2):
 
     cleaned, _, _, central, _ = mask_out_pixels(img, sex_seg, middle,n_iter=5)
     
-    if np.any(np.logical_and(np.not_equal(sex_seg[central],0),np.not_equal(sex_seg[central],middle))):
-       raise ValueError('Blending suspected')
+    blended_pixels = np.logical_and(np.not_equal(sex_seg,0),np.not_equal(sex_seg,middle))*central
+    blend_flux = np.sum(img[np.nonzero(blended_pixels)])
+    if np.any(blended_pixels):
+        loc = np.argwhere(blended_pixels==True)[0]
+        blended_galaxy = sex_seg[loc[0],loc[1]]
+        blended_galaxy_flux = np.sum(img[np.where(sex_seg==blended_galaxy)])
+    else:
+        blended_galaxy_flux = np.inf
+    if blend_flux/blended_galaxy_flux > 0.5:
+        raise ValueError('Blending suspected')
 
 
     '''Rotate'''
@@ -1092,7 +1100,10 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2):
     
     '''Add noise'''
     background_mask = np.where(sex_seg == 0, 1, 0)
-    background_std = np.std(img * background_mask)
+    if noise_level == None:
+        background_std = np.std(img * background_mask)
+    else:
+        background_std = noise_level
     random_background = np.random.normal(scale=background_std, size=img_rotate.shape)
     rotated = np.where(img_rotate == 0, random_background, img_rotate)
 
