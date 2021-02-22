@@ -762,7 +762,6 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             try:
                 ''' Loop on the filters '''
                 target_size = int(np.ceil(128/target_scaling)+1)
-                print("target ",target_size)
                 im = np.zeros((target_size, target_size, band_num))
 
                 k = 0
@@ -787,7 +786,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     new_size = np.ceil(128/scalings[res])+1
                     im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
                     ''' Resize the image to the highest resolution to get consistent array sizes'''
-                    im_tmp = rescale(im_tmp,p.pixel_scale[res]/target_pixel_scale)
+                    im_tmp = rescale(im_tmp,p.pixel_scale[res]/target_pixel_scale,multichannel='True')
                     im_tmp = _resize_image(im_tmp,target_size)
 
                     im[:,:,k:k+len(p.filters[res])] = im_tmp
