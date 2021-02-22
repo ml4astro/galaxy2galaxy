@@ -788,7 +788,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
                     ''' Resize the image to the highest resolution to get consistent array sizes'''
                     im_tmp = rescale(im_tmp,p.pixel_scale[res]/target_pixel_scale)
-                    im_tmp = _resize_image(im_tmp, (target_size, target_size, len(p.filters[res])))
+                    im_tmp = _resize_image(im_tmp,target_size)
 
                     im[:,:,k:k+len(p.filters[res])] = im_tmp
                     k += len(p.filters[res])
