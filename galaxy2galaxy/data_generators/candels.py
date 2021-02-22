@@ -26,7 +26,7 @@ import h5py
 import glob
 import os
 import sys
-from skimage.transform import resize
+from skimage.transform import resize,rescale
 from scipy.ndimage import binary_dilation  # type: ignore
 from astropy.table import Table
 from scipy.ndimage import rotate
@@ -786,9 +786,9 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     ''' Resize the image to the low resolution'''
                     new_size = np.ceil(128/scalings[res])+1
                     im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
-
                     ''' Resize the image to the highest resolution to get consistent array sizes'''
-                    im_tmp = resize(im_tmp, (target_size, target_size, len(p.filters[res])))
+                    im_tmp = rescale(im_tmp,p.pixel_scale[res]/p.target_pixel_scale)
+                    im_tmp = _resize_image(im_tmp, (target_size, target_size, len(p.filters[res])))
 
                     im[:,:,k:k+len(p.filters[res])] = im_tmp
                     k += len(p.filters[res])
