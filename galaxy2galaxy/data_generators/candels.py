@@ -715,9 +715,9 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     band_num = np.sum([len(p.filters[res]) for res in p.resolutions])
     scalings = {}
     for res in p.resolutions:
-        scalings[res] = p.pixel_scale[res]/0.06
+        scalings[res] = p.pixel_scale[res]/p.base_pixel_scale[res]
     target_pixel_scale = np.min([p.pixel_scale[res] for res in p.resolutions])
-    target_scaling = target_pixel_scale/0.06
+    target_scaling = target_pixel_scale/p.base_pixel_scale["high"]
     
     '''Load the catalogue containing every fields and every filter'''
     all_cat = Table.read(os.path.join(data_dir, 'CANDELS_morphology_v8_3dhst_galfit_ALLFIELDS.fit'))
@@ -941,6 +941,7 @@ class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsMultires):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = {'high' : 0.1, 'low' : 0.3}
+    p.base_pixel_scale = {'high' : 0.03,'low' : 0.13}
     p.img_len = 64
     p.sigmas = {"high" : [1e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
     p.filters = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
@@ -968,6 +969,7 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.pixel_scale = {'high' : 0.1, 'low' : 0.3}
+    p.base_pixel_scale = {'high' : 0.03,'low' : 0.13}
     p.img_len = 64
     p.sigmas = {"high" : [3.4e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
     p.filters = {"high" : ['acs_f775w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
