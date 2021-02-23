@@ -1020,7 +1020,7 @@ def sort_nicely( l ):
 
 def mask_out_pixels(img, segmap, segval,
                     n_iter: int = 5, shuffle: bool = False,
-                    noise_factor: int = 1):
+                    noise_factor: int = 1, noise_level=None):
     """
     Replace central galaxy neighbours with background noise
 
@@ -1051,8 +1051,10 @@ def mask_out_pixels(img, segmap, segval,
         masked_img[sources_except_central] = random_background_pixels
     else:
         # Create a realisation of the background for the std value
-        background_std = np.std(img[background_mask])
-        # background_std = 0.007220430274502116
+        if noise_level == None:
+            background_std = np.std(img[background_mask])
+        else:
+            background_std = noise_level
         random_background = np.random.normal(scale=background_std, size=img.shape)
         masked_img[sources_except_central] = random_background[sources_except_central]
         masked_img[np.where(masked_img==0.0)] = random_background[np.where(masked_img==0.0)]
@@ -1080,7 +1082,7 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
     if middle == 0:
         raise ValueError('No galaxy detected in the center')
 
-    cleaned, _, _, central, _ = mask_out_pixels(img, sex_seg, middle,n_iter=5)
+    cleaned, _, _, central, _ = mask_out_pixels(img, sex_seg, middle,n_iter=5,noise_level=noise_level)
     
     blended_pixels = np.logical_and(np.not_equal(sex_seg,0),np.not_equal(sex_seg,middle))*central
     blend_flux = np.sum(img[np.nonzero(blended_pixels)])
