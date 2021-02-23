@@ -773,8 +773,8 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                         ''' Open the image corresponding to the index of the current galaxy'''
 
                         tmp_file = glob.glob(os.path.join(data_dir, field, filt)+'/galaxy_'+str(index)+'_*')[0]
-                        if np.max(fits.open(tmp_file)[0].data) == 0.:
-                            sigmas[res][n_filter] = 10
+                        # if np.max(fits.open(tmp_file)[0].data) == 0.:
+                        #     sigmas[res][n_filter] = 10
                         im_import = fits.open(tmp_file)[0].data
                         im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5,noise_level=p.sigmas[res][n_filter])
 
