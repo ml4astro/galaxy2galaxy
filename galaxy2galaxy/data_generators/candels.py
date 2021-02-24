@@ -882,6 +882,9 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
         "psf/encoded": tf.FixedLenFeature((), tf.string),
         "psf/format": tf.FixedLenFeature((), tf.string),
 
+        "ps/encoded": tf.FixedLenFeature((), tf.string),
+        "ps/format": tf.FixedLenFeature((), tf.string),
+
         "sigma_noise/encoded": tf.FixedLenFeature((), tf.string),
         "sigma_noise/format": tf.FixedLenFeature((), tf.string),
 
@@ -908,7 +911,14 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
-        "sigma": tf.contrib.slim.tfexample_decoder.Image(
+        "ps": tf.contrib.slim.tfexample_decoder.Image(
+                image_key="ps/encoded",
+                format_key="ps/format",
+#                 channels=self.num_bands,
+                shape=[p.img_len, p.img_len//2+1, self.num_bands],
+                dtype=tf.float32),
+
+        "sigma_noise": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="sigma_noise/encoded",
                 format_key="sigma_noise/format",
 #                 channels=self.num_bands,
