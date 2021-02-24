@@ -37,8 +37,8 @@ def loglikelihood_fn(xin, yin, features, hparams):
   size = xin.get_shape().as_list()[1]
   if hparams.likelihood_type == 'Fourier':
     # Compute FFT normalization factor
-    x = tf.spectral.rfft2d(xin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.) / size**2 * (2*np.pi)**2
-    y = tf.spectral.rfft2d(yin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.) / size**2 * (2*np.pi)**2
+    x = tf.spectral.rfft2d(xin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'][...,0])),0.) / size**2 * (2*np.pi)**2
+    y = tf.spectral.rfft2d(yin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'][...,0])),0.) / size**2 * (2*np.pi)**2
 
     pz = 0.5 * tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2]) #/ size**2
     return -pz
