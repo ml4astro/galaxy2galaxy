@@ -718,6 +718,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
         scalings[res] = p.pixel_scale[res]/p.base_pixel_scale[res]
     target_pixel_scale = p.pixel_scale[p.resolutions[0]]
     target_scaling = target_pixel_scale/p.base_pixel_scale[p.resolutions[0]]
+    target_size = p.img_len
     print("scalings and all ",scalings,target_pixel_scale,target_scaling)
     
     '''Load the catalogue containing every fields and every filter'''
@@ -761,7 +762,6 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
             try:
                 ''' Loop on the filters '''
-                target_size = int(np.ceil(128/target_scaling)+1)
                 im = np.zeros((target_size, target_size, band_num))
 
                 k = 0
@@ -969,7 +969,7 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
 
   def hparams(self, defaults, model_hparams):
     p = defaults
-    p.pixel_scale = {'high' : 0.1, 'low' : 0.3}
+    p.pixel_scale = {'high' : 0.06, 'low' : 0.06}
     p.base_pixel_scale = {'high' : 0.06,'low' : 0.06}
     p.img_len = 64
     p.sigmas = {"high" : [0.0034001764449330513], "low" : [0.003954237367399534, 0.003849901319445, 0.004017507500562]}
