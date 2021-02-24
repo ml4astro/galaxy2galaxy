@@ -803,10 +803,14 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     attributes=None
                 
 #                 ''' Create the power spectrum '''
-#                 ps = np.zeros((p.img_len, p.img_len//2+1, len(p.filters)))
-#                 for i in range(len(p.filters)):
-#                     ps[:, :, n_filter] = np.random.normal(0, p.sigmas[n_filter], (p.img_len, p.img_len // 2 + 1))
-                
+                k = 0
+                noise_im = np.zeros((p.img_len, p.img_len, len(p.filters)))
+                for res in p.resolutions:
+                    for n_filter in range(len(p.filters[res])):
+                        noise_im[:, :, n_filter+k] = np.random.normal(0, p.sigmas[res][n_filter], (p.img_len, p.img_len))
+                    k+=1
+                ps = np.abs(np.fft.rfft2(ps))
+
                 ''' Add a flag corresponding to the field '''
                 field_info = np.asarray(n_field)
 
@@ -820,6 +824,8 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 "image/format": ["raw"],
                 "psf/encoded": [im_psf.astype('float32').tostring()],
                 "psf/format": ["raw"],
+                "ps/encoded": [ps.astype('float32').tostring()],
+                "ps/format": ["raw"],
                 "sigma_noise/encoded": [sigmas_array.astype('float32').tostring()],
                 "sigma_noise/format": ["raw"],
                 "field/encoded": [field_info.astype('float32').tostring()],
