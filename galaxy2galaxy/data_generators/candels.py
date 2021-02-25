@@ -809,7 +809,9 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     for n_filter in range(len(p.filters[res])):
                         noise_im[:, :, n_filter+k] = np.random.normal(0, p.sigmas[res][n_filter], (p.img_len, p.img_len))
                     k+=1
+                noise_im = np.transpose(noise_im,[2,0,1])
                 ps = np.abs(np.fft.rfft2(noise_im))
+                ps = np.transpose(ps,[1,2,0])
 
                 ''' Add a flag corresponding to the field '''
                 field_info = np.asarray(n_field)
