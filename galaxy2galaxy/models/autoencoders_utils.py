@@ -118,7 +118,7 @@ def autoencoder_body(self, features):
       input_layer = tf.placeholder(tf.float32, shape=b_shape)
       x = self.unbottleneck(input_layer, res_size)
       x = self.decoder(x, None)
-      reconstr = tf.layers.dense(x, self.num_channels, name="autoencoder_final",
+      reconstr = tf.layers.dense(x, input_shape[-1], name="autoencoder_final",
                                  activation=output_activation)
       hub.add_signature(inputs=input_layer, outputs=reconstr)
       hub.attach_message("stamp_size", tf.train.Int64List(value=[hparams.problem_hparams.img_len]))
@@ -210,7 +210,7 @@ def autoencoder_body(self, features):
     res = x[:, :shape[1], :shape[2], :]
 
   with tf.variable_scope('decoder_module'):
-    reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final",
+    reconstr = tf.layers.dense(res, shape[-1], name="autoencoder_final",
                                activation=output_activation)
 
   # Apply channel-wise convolution with the PSF if requested
@@ -225,7 +225,7 @@ def autoencoder_body(self, features):
                                           [0, int(hparams.psf_convolution_pad_factor*shape[2])],
                                           [0,0]])
     psf_padded_t = tf.transpose(psf_padded, perm=[0, 3,  1, 2])
-    reconstr_t = tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded)), tf.complex64))
+    reconstr_t = tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded_t)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded_t)), tf.complex64))
     reconstr = tf.transpose(reconstr_t, perm=[0, 2, 3, 1])
     reconstr = reconstr[:, :shape[1], :shape[2], :]
 
