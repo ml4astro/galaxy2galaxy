@@ -804,7 +804,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 
 #                 ''' Create the power spectrum '''
                 k = 0
-                noise_im = np.zeros((p.img_len, p.img_len, len(p.filters)))
+                noise_im = np.zeros((p.img_len, p.img_len, band_num))
                 for res in p.resolutions:
                     for n_filter in range(len(p.filters[res])):
                         noise_im[:, :, n_filter+k] = np.random.normal(0, p.sigmas[res][n_filter], (p.img_len, p.img_len))
