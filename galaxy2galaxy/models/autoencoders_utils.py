@@ -37,10 +37,12 @@ def loglikelihood_fn(xin, yin, features, hparams):
   size = xin.get_shape().as_list()[1]
   if hparams.likelihood_type == 'Fourier':
     # Compute FFT normalization factor
-    x = tf.spectral.rfft2d(xin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'][...,0])),0.) / size**2 * (2*np.pi)**2
-    y = tf.spectral.rfft2d(yin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'][...,0])),0.) / size**2 * (2*np.pi)**2
+    x = tf.transpose(xin,[0,3,1,2])
+    y = tf.transpose(yin,[0,3,1,2])
+    x = tf.transpose(tf.spectral.rfft2d(x),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.) / size**2 * (2*np.pi)**2
+    y = tf.transpose(tf.spectral.rfft2d(y),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.) / size**2 * (2*np.pi)**2
 
-    pz = 0.5 * tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2]) #/ size**2
+    pz = 0.5 * tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2, -3]) #/ size**2
     return -pz
   elif hparams.likelihood_type == 'Pixel':
     # TODO: include per example noise std
