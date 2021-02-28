@@ -681,10 +681,10 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     """
     return [{
         "split": problem.DatasetSplit.TRAIN,
-        "shards": 1,
+        "shards": 10,
     }, {
         "split": problem.DatasetSplit.EVAL,
-        "shards": 0,
+        "shards": 1,
     }]
 
   # START: Subclass interface
@@ -993,7 +993,7 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
     p.sigmas = {"high" : [0.0034001764449330513], "low" : [0.003954237367399534, 0.003849901319445, 0.004017507500562]}
     p.filters = {"high" : ['acs_f775w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
     p.resolutions = ["high","low"]
-    p.example_per_shard = 1000
+    p.example_per_shard = 100
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
