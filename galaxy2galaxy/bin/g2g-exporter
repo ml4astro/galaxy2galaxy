@@ -101,6 +101,7 @@ def main(_):
 
   estimator = create_estimator(run_config, hparams)
   hparams.img_len = problem.get_hparams().img_len
+  hparams.resolutions = problem.get_hparams().resolutions
   hparams.attributes = problem.get_hparams().attributes
 
   # Use tf hub to export any module that has been registered
