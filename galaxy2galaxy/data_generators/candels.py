@@ -868,12 +868,14 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     return example
 
   def example_reading_spec(self):
-    """Define how data is serialized to file and read back.
+    """
+    Define how data is serialized to file and read back.
 
     Returns:
       data_fields: A dictionary mapping data names to its feature type.
       data_items_to_decoders: A dictionary mapping data names to TF Example
-         decoders, to be used when reading back TF examples from disk.
+                              decoders, to be used when reading back TF examples 
+                              from disk.
     """
     p = self.get_hparams()
 
@@ -902,28 +904,28 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
         "inputs": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="image/encoded",
                 format_key="image/format",
-#                 channels=self.num_bands,
+                # channels=self.num_bands,
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
         "psf": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="psf/encoded",
                 format_key="psf/format",
-#                 channels=self.num_bands,
+                # channels=self.num_bands,
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="ps/encoded",
                 format_key="ps/format",
-#                 channels=self.num_bands,
+                # channels=self.num_bands,
                 shape=[p.img_len, p.img_len//2+1, self.num_bands],
                 dtype=tf.float32),
 
         "sigma_noise": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="sigma_noise/encoded",
                 format_key="sigma_noise/format",
-#                 channels=self.num_bands,
+                # channels=self.num_bands,
                 shape=[self.num_bands],
                 dtype=tf.float32),
         
@@ -936,7 +938,6 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     if hasattr(p, 'attributes'):
         for k in p.attributes:
             data_items_to_decoders[k] = tf.contrib.slim.tfexample_decoder.Tensor('attrs/'+k)
-#         data_items_to_decoders['field'] = tf.contrib.slim.tfexample_decoder.Tensor('attrs/field')
 
     return data_fields, data_items_to_decoders
 #     END: Subclass interface
