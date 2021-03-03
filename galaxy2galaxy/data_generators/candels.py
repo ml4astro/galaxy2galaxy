@@ -744,109 +744,106 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
     # Step 2: Extract postage stamps, resize them to requested size
     ''' Loop on the two fields'''
-    for n_field, field in enumerate(['GDS']):
-        
-        print(f"\n generating{field}, {n_field}\n")
-        n_gal_creat = 0
-        index = 0
-        
-        ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
-        sub_cat = all_cat[np.where(all_cat["FIELD_1"]==field)[0]]
+    n_gal_creat = 0
+    index = 0
+    
+    ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
+    sub_cat = all_cat[np.where(np.isin(all_cat["FIELD_1"],["GDS","GDN"]))[0]]
 
-        ''' Loop on all the galaxies of the field '''
-        for gal in sub_cat['RB_ID']:
-            if gal == index or gal == 15431 :     # To take care of the redudency inside the cat
-                continue
-            index = gal
-            print(index)
+    ''' Loop on all the galaxies of the field '''
+    for m,gal in enumerate(sub_cat['RB_ID']):
+        if gal == index or gal == 15431 or m < task_id*p.example_per_shard:     # To take care of the redudency inside the cat
+            continue
+        index = gal
+        print(index)
 
-            try:
-                ''' Loop on the filters '''
-                im = np.zeros((target_size, target_size, band_num))
+        try:
+            ''' Loop on the filters '''
+            im = np.zeros((target_size, target_size, band_num))
 
-                k = 0
-                for res in p.resolutions:
-                    im_tmp = np.zeros((128, 128, len(p.filters[res])))
-                    for n_filter, filt in enumerate(p.filters[res]):
-                        print(filt)
-                        # try :
-                        ''' Open the image corresponding to the index of the current galaxy'''
+            k = 0
+            for res in p.resolutions:
+                im_tmp = np.zeros((128, 128, len(p.filters[res])))
+                for n_filter, filt in enumerate(p.filters[res]):
+                    print(filt)
+                    # try :
+                    ''' Open the image corresponding to the index of the current galaxy'''
 
-                        tmp_file = glob.glob(os.path.join(data_dir, field, filt)+'/galaxy_'+str(index)+'_*')[0]
-                        # if np.max(fits.open(tmp_file)[0].data) == 0.:
-                        #     sigmas[res][n_filter] = 10
-                        im_import = fits.open(tmp_file)[0].data
-                        im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5,noise_level=p.sigmas[res][n_filter])
+                    tmp_file = glob.glob(os.path.join(data_dir, field, filt)+'/galaxy_'+str(index)+'_*')[0]
+                    # if np.max(fits.open(tmp_file)[0].data) == 0.:
+                    #     sigmas[res][n_filter] = 10
+                    im_import = fits.open(tmp_file)[0].data
+                    im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5,noise_level=p.sigmas[res][n_filter])
 
-                        # except Exception:
-                        #     print('Galaxy not seen in every filter')
-                        #     continue
-                            
-                    ''' Resize the image to the low resolution'''
-                    new_size = np.ceil(128/scalings[res])+1
-                    im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
-                    ''' Resize the image to the highest resolution to get consistent array sizes'''
-                    im_tmp = rescale(im_tmp,p.pixel_scale[res]/target_pixel_scale,multichannel=True)
-                    im_tmp = _resize_image(im_tmp,target_size)
+                    # except Exception:
+                    #     print('Galaxy not seen in every filter')
+                    #     continue
+                        
+                ''' Resize the image to the low resolution'''
+                new_size = np.ceil(128/scalings[res])+1
+                im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
+                ''' Resize the image to the highest resolution to get consistent array sizes'''
+                im_tmp = rescale(im_tmp,p.pixel_scale[res]/target_pixel_scale,multichannel=True)
+                im_tmp = _resize_image(im_tmp,target_size)
 
-                    im[:,:,k:k+len(p.filters[res])] = im_tmp
-                    k += len(p.filters[res])
-                
-                im = _resize_image(im, p.img_len)
-                
+                im[:,:,k:k+len(p.filters[res])] = im_tmp
+                k += len(p.filters[res])
+            
+            im = _resize_image(im, p.img_len)
+            
 
-                ''' Load the wanted physical parameters of the galaxy '''
-                if hasattr(p, 'attributes'):
-                    attributes = {k: float(all_cat[k][index]) for k in p.attributes}
+            ''' Load the wanted physical parameters of the galaxy '''
+            if hasattr(p, 'attributes'):
+                attributes = {k: float(all_cat[k][index]) for k in p.attributes}
 
-                else:
-                    attributes=None
-                
+            else:
+                attributes=None
+            
 #                 ''' Create the power spectrum '''
-                k = 0
-                noise_im = np.zeros((p.img_len, p.img_len, band_num))
-                for res in p.resolutions:
-                    for n_filter in range(len(p.filters[res])):
-                        noise_im[:, :, n_filter+k] = np.random.normal(0, p.sigmas[res][n_filter], (p.img_len, p.img_len))
-                    k+=1
-                noise_im = np.transpose(noise_im,[2,0,1])
-                ps = np.abs(np.fft.rfft2(noise_im))
-                ps = np.transpose(ps,[1,2,0])
+            k = 0
+            noise_im = np.zeros((p.img_len, p.img_len, band_num))
+            for res in p.resolutions:
+                for n_filter in range(len(p.filters[res])):
+                    noise_im[:, :, n_filter+k] = np.random.normal(0, p.sigmas[res][n_filter], (p.img_len, p.img_len))
+                k+=1
+            noise_im = np.transpose(noise_im,[2,0,1])
+            ps = np.abs(np.fft.rfft2(noise_im))
+            ps = np.transpose(ps,[1,2,0])
 
-                ''' Add a flag corresponding to the field '''
-                field_info = np.asarray(n_field)
+            ''' Add a flag corresponding to the field '''
+            field_info = np.asarray(n_field)
 
-                sigmas_array = []
-                for res in p.resolutions:
-                    sigmas_array += sigmas[res]
-                sigmas_array = np.array(sigmas_array)
+            sigmas_array = []
+            for res in p.resolutions:
+                sigmas_array += sigmas[res]
+            sigmas_array = np.array(sigmas_array)
 
-                ''' Create the output to match T2T format '''
-                serialized_output = {"image/encoded": [im.astype('float32').tostring()],
-                "image/format": ["raw"],
-                "psf/encoded": [im_psf.astype('float32').tostring()],
-                "psf/format": ["raw"],
-                "ps/encoded": [ps.astype('float32').tostring()],
-                "ps/format": ["raw"],
-                "sigma_noise/encoded": [sigmas_array.astype('float32').tostring()],
-                "sigma_noise/format": ["raw"],
-                "field/encoded": [field_info.astype('float32').tostring()],
-                "field/format": ["raw"]}
-                
-                if attributes is not None:
-                    for k in attributes:
-                        serialized_output['attrs/'+k] = [attributes[k]]
-                
-                ''' Increment the number of galaxy created on the shard '''
-                n_gal_creat += 1
-                
-                if n_gal_creat > p.example_per_shard:
-                    print('out')
-                    break
-                yield serialized_output
-            except ValueError:
-                print(sys.exc_info()[0], sys.exc_info()[1])
-                continue
+            ''' Create the output to match T2T format '''
+            serialized_output = {"image/encoded": [im.astype('float32').tostring()],
+            "image/format": ["raw"],
+            "psf/encoded": [im_psf.astype('float32').tostring()],
+            "psf/format": ["raw"],
+            "ps/encoded": [ps.astype('float32').tostring()],
+            "ps/format": ["raw"],
+            "sigma_noise/encoded": [sigmas_array.astype('float32').tostring()],
+            "sigma_noise/format": ["raw"],
+            "field/encoded": [field_info.astype('float32').tostring()],
+            "field/format": ["raw"]}
+            
+            if attributes is not None:
+                for k in attributes:
+                    serialized_output['attrs/'+k] = [attributes[k]]
+            
+            ''' Increment the number of galaxy created on the shard '''
+            n_gal_creat += 1
+            
+            if n_gal_creat > p.example_per_shard or m >= task_id*p.example_per_shard:
+                print('out')
+                break
+            yield serialized_output
+        except ValueError:
+            print(sys.exc_info()[0], sys.exc_info()[1])
+            continue
 
   def preprocess_example(self, example, unused_mode, unused_hparams):
     """ Preprocess the examples, can be used for further augmentation or
