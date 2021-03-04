@@ -719,7 +719,6 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     target_pixel_scale = p.pixel_scale[p.resolutions[0]]
     target_scaling = target_pixel_scale/p.base_pixel_scale[p.resolutions[0]]
     target_size = p.img_len
-    print("scalings and all ",scalings,target_pixel_scale,target_scaling)
     
     '''Load the catalogue containing every fields and every filter'''
     all_cat = Table.read(os.path.join(data_dir, 'CANDELS_morphology_v8_3dhst_galfit_ALLFIELDS.fit'))
@@ -748,7 +747,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     index = 0
     
     ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
-    sub_cat = all_cat[np.where(np.isin(all_cat["FIELD_1"],["GDS","GDN"]))[0]]
+    sub_cat = all_cat[np.where(np.isin(all_cat["FIELD_1"],["GDS","GDN"]))]
 
     ''' Loop on all the galaxies of the field '''
     for m,gal in enumerate(sub_cat['RB_ID']):
