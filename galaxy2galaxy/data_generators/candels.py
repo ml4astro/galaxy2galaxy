@@ -752,7 +752,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
     ''' Loop on all the galaxies of the field '''
     for m,gal in enumerate(sub_cat['RB_ID']):
-        if gal == index or gal == 15431 or m < task_id*p.example_per_shard:     # To take care of the redudency inside the cat
+        if gal == index or gal == 15431 or m < task_id*2*p.example_per_shard:     # To take care of the redudency inside the cat
             continue
         index = gal
         print(index)
@@ -769,7 +769,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     # try :
                     ''' Open the image corresponding to the index of the current galaxy'''
 
-                    tmp_file = glob.glob(os.path.join(data_dir, field, filt)+'/galaxy_'+str(index)+'_*')[0]
+                    tmp_file = glob.glob(os.path.join(data_dir, sub_cat["FIELD_1"][m], filt)+'/galaxy_'+str(index)+'_*')[0]
                     # if np.max(fits.open(tmp_file)[0].data) == 0.:
                     #     sigmas[res][n_filter] = 10
                     im_import = fits.open(tmp_file)[0].data
@@ -837,7 +837,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             ''' Increment the number of galaxy created on the shard '''
             n_gal_creat += 1
             
-            if n_gal_creat > p.example_per_shard or m >= task_id*p.example_per_shard:
+            if n_gal_creat > p.example_per_shard or m >= task_id*2*p.example_per_shard:
                 print('out')
                 break
             yield serialized_output
@@ -988,10 +988,10 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
     p.pixel_scale = {'high' : 0.06, 'low' : 0.06}
     p.base_pixel_scale = {'high' : 0.06,'low' : 0.06}
     p.img_len = 64
-    p.sigmas = {"high" : [0.0034001764449330513], "low" : [0.003954237367399534, 0.003849901319445, 0.004017507500562]}
-    p.filters = {"high" : ['acs_f775w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
+    p.sigmas = {"high" : [0.0034001764449330513], "low" : [0.004017507500562]}
+    p.filters = {"high" : ['acs_f775w'], "low" : ['wfc3_f160w']}
     p.resolutions = ["high","low"]
-    p.example_per_shard = 100
+    p.example_per_shard = 1000
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
