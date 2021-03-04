@@ -687,6 +687,11 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
         "shards": 1,
     }]
 
+  @property
+  def multiprocess_generate(self):
+    """Whether to generate the data in multiple parallel processes."""
+    return True
+
   # START: Subclass interface
   def hparams(self, defaults, model_hparams):
     p = defaults
