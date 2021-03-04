@@ -837,7 +837,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             ''' Increment the number of galaxy created on the shard '''
             n_gal_creat += 1
             
-            if n_gal_creat > p.example_per_shard or m >= task_id*2*p.example_per_shard:
+            if n_gal_creat > p.example_per_shard or m >= (task_id+1)*2*p.example_per_shard:
                 print('out')
                 break
             yield serialized_output
