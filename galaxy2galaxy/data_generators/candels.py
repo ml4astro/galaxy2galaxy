@@ -746,13 +746,18 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     ''' Loop on the two fields'''
     n_gal_creat = 0
     index = 0
+   
     
     ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
     sub_cat = all_cat[np.where(np.isin(list(all_cat["FIELD_1"]),["GDS","GDN"]))]
+    assert(task_id > -1)
+    indexes = range(task_id*p.example_per_shard,
+                  min((task_id+1)*p.example_per_shard, len(sub_cat)))
+    sub_cat = sub_cat[indexes]
 
     ''' Loop on all the galaxies of the field '''
     for m,gal in enumerate(sub_cat['RB_ID']):
-        if gal == index or gal == 15431 or m < task_id*2*p.example_per_shard:     # To take care of the redudency inside the cat
+        if gal == index or gal == 15431:     # To take care of the redudency inside the cat
             continue
         index = gal
         print(index)
@@ -837,7 +842,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             ''' Increment the number of galaxy created on the shard '''
             n_gal_creat += 1
             
-            if n_gal_creat > p.example_per_shard or m >= (task_id+1)*2*p.example_per_shard:
+            if n_gal_creat > p.example_per_shard:
                 print('out')
                 break
             yield serialized_output
