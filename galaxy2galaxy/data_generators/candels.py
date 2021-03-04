@@ -710,6 +710,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     """ 
     Generator yielding individual postage stamps.
     """
+    print(task_id)
     
     p = self.get_hparams()
     band_num = np.sum([len(p.filters[res]) for res in p.resolutions])
@@ -747,7 +748,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     index = 0
     
     ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
-    sub_cat = all_cat[np.where(np.isin(all_cat["FIELD_1"],["GDS","GDN"]))]
+    sub_cat = all_cat[np.where(np.isin(list(all_cat["FIELD_1"]),["GDS","GDN"]))]
 
     ''' Loop on all the galaxies of the field '''
     for m,gal in enumerate(sub_cat['RB_ID']):
@@ -810,7 +811,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             ps = np.transpose(ps,[1,2,0])
 
             ''' Add a flag corresponding to the field '''
-            field_info = np.asarray(n_field)
+            field_info = np.asarray(all_cat["FIELD_1"][m])
 
             sigmas_array = []
             for res in p.resolutions:
@@ -826,7 +827,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             "ps/format": ["raw"],
             "sigma_noise/encoded": [sigmas_array.astype('float32').tostring()],
             "sigma_noise/format": ["raw"],
-            "field/encoded": [field_info.astype('float32').tostring()],
+            "field/encoded": [field_info.tostring()],
             "field/format": ["raw"]}
             
             if attributes is not None:
