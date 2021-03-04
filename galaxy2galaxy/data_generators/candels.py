@@ -756,8 +756,8 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
     sub_cat = all_cat[np.where(np.isin(list(all_cat["FIELD_1"]),["GDS","GDN"]))]
     assert(task_id > -1)
-    indexes = range(task_id*p.example_per_shard,
-                  min((task_id+1)*p.example_per_shard, len(sub_cat)))
+    indexes = list(range(task_id*p.example_per_shard,
+                  min((task_id+1)*p.example_per_shard, len(sub_cat))))
     sub_cat = sub_cat[indexes]
 
     ''' Loop on all the galaxies of the field '''
