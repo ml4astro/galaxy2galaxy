@@ -821,7 +821,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             ps = np.transpose(ps,[1,2,0])
 
             ''' Add a flag corresponding to the field '''
-            field_info = np.asarray(all_cat["FIELD_1"][m])
+            field_info = np.asarray(1 if all_cat["FIELD_1"][m] == "GDS" else 0)
 
             sigmas_array = []
             for res in p.resolutions:
@@ -837,7 +837,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             "ps/format": ["raw"],
             "sigma_noise/encoded": [sigmas_array.astype('float32').tostring()],
             "sigma_noise/format": ["raw"],
-            "field/encoded": [field_info.tostring()],
+            "field/encoded": [field_info.astype('float32').tostring()],
             "field/format": ["raw"]}
             
             if attributes is not None:
