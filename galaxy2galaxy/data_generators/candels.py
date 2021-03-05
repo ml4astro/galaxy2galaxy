@@ -696,8 +696,8 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
   def hparams(self, defaults, model_hparams):
     p = defaults
     p.img_len = 128
-    p.sigmas = {"high" : [1e-4], "low" : [6.7e-3, 5.4e-3, 4.0e-3]}
-    p.filters = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
+    p.sigmas = {"high" : [1e-4], "low" : [4.0e-3]}
+    p.filters = {"high" : ['acs_f814w'], "low" : ['wfc3_f160w']}
     p.resolutions = ["high","low"]
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
@@ -756,8 +756,8 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
     sub_cat = all_cat[np.where(np.isin(list(all_cat["FIELD_1"]),["GDS","GDN"]))]
     assert(task_id > -1)
-    indexes = list(range(task_id*p.example_per_shard,
-                  min((task_id+1)*p.example_per_shard, len(sub_cat))))
+    indexes = list(range(task_id*4*p.example_per_shard,
+                  min((task_id*4+1)*p.example_per_shard, len(sub_cat))))
     sub_cat = sub_cat[indexes]
 
     ''' Loop on all the galaxies of the field '''

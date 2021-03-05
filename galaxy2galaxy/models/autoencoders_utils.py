@@ -53,7 +53,7 @@ def loglikelihood_fn(xin, yin, features, hparams):
 
 def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4):
   """Helper for image summaries that are safe on TPU."""
-  if len(image_logits.get_shape()) != 4:
+  if len(image_logits.get_shape()) != 4 or not image_logits.get_shape()[4] in [1,3,4]:
     tf.logging.info("Not generating image summary, maybe not an image.")
     return
   return tf.summary.image(name, pack_images(image_logits, rows, cols),
