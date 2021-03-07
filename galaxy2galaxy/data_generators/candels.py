@@ -729,7 +729,10 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     '''Load the catalogue containing every fields and every filter'''
     all_cat = Table.read(os.path.join(data_dir, 'CANDELS_morphology_v8_3dhst_galfit_ALLFIELDS.fit'))
     all_cat['FIELD_1'][np.where(all_cat['FIELD_1']=='gdn   ')] = 'GDN'
+    all_cat['FIELD_1'][np.where(all_cat['FIELD_1']=='egs   ')] = 'EGS'
     all_cat['FIELD_1'][np.where(all_cat['FIELD_1']=='GDS   ')] = 'GDS'
+    all_cat['FIELD_1'][np.where(all_cat['FIELD_1']=='UDS   ')] = 'UDS'
+    all_cat['FIELD_1'][np.where(all_cat['FIELD_1']=='COSMOS   ')] = 'COSMOS'
     
     ''' Load the psfs for each filter and resize'''
     cube_psf = np.zeros((167, 167, band_num))
@@ -754,7 +757,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
    
     
     ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
-    sub_cat = all_cat[np.where(np.isin(list(all_cat["FIELD_1"]),["GDS","GDN"]))]
+    sub_cat = all_cat[np.where(np.isin(list(all_cat["FIELD_1"]),["GDS","GDN","EGS","COSMOS","UDS"]))]
     assert(task_id > -1)
     indexes = list(range(task_id*4*p.example_per_shard,
                   min((task_id*4+1)*p.example_per_shard, len(sub_cat))))
