@@ -681,10 +681,10 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     """
     return [{
         "split": problem.DatasetSplit.TRAIN,
-        "shards": 10,
+        "shards": 20,
     }, {
         "split": problem.DatasetSplit.EVAL,
-        "shards": 1,
+        "shards": 2,
     }]
 
   @property
@@ -851,10 +851,10 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             n_gal_creat += 1
             
             if n_gal_creat > p.example_per_shard:
-                print('out')
+                print('out ',n_gal_creat)
                 break
             yield serialized_output
-        except ValueError:
+        except Exception:
             print(sys.exc_info()[0], sys.exc_info()[1])
             continue
 
@@ -976,7 +976,7 @@ class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsMultires):
     p.sigmas = {"high" : [1e-4], "low" : [0.003954237367399534, 0.003849901319445, 0.004017507500562]}
     p.filters = {"high" : ['acs_f814w'], "low" : ['f105w', 'f125w', 'wfc3_f160w']}
     p.resolutions = ["high","low"]
-    p.example_per_shard = 1000
+    p.example_per_shard = 2000
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
