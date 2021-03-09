@@ -787,7 +787,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     # if np.max(fits.open(tmp_file)[0].data) == 0.:
                     #     sigmas[res][n_filter] = 10
                     im_import = fits.open(tmp_file)[0].data
-                    im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5,noise_level=p.sigmas[res][n_filter])
+                    im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5)#,noise_level=p.sigmas[res][n_filter])
 
                     # except Exception:
                     #     print('Galaxy not seen in every filter')
@@ -1063,7 +1063,7 @@ def mask_out_pixels(img, segmap, segval,
     # Create binary masks of all segmented sources
     sources = binary_dilation(segmap, iterations=n_iter)
 
-    background_mask = np.logical_not(sources)
+    background_mask = np.logical_and(np.logical_not(sources),np.array(img,dtype=bool))
     # Create binary mask of the central galaxy
     central_source = binary_dilation(np.where(segmap == segval, 1, 0),
                                      iterations=n_iter)
@@ -1117,21 +1117,19 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
     blended_pixels = np.logical_and(np.not_equal(sex_seg,0),np.not_equal(sex_seg,middle))*central
     blend_flux = np.sum(img[np.nonzero(blended_pixels)])
     if np.any(blended_pixels):
-        loc = np.argwhere(blended_pixels==True)[0]
-        blended_galaxy = sex_seg[loc[0],loc[1]]
-        blended_galaxy_flux = np.sum(img[np.where(sex_seg==blended_galaxy)])
-    else:
-        blended_galaxy_flux = np.inf
-    if blend_flux/blended_galaxy_flux > 0.5:
-        raise ValueError('Blending suspected')
-
+        loc = np.argwhere(blended_pixels==True)
+        blended_galaxies = np.unique(sex_seg[loc])
+        for blended_galaxy in blended_galaxies:
+            blended_galaxy_flux = np.sum(img[np.where(sex_seg==blended_galaxy)])
+            if blend_flux/blended_galaxy_flux > 0.5:
+              raise ValueError('Blending suspected')
 
     '''Rotate'''
     PA = cat[find_central(cat)[0]][4]
     img_rotate = rotate(cleaned, PA, reshape=False)
     
     '''Add noise'''
-    background_mask = np.where(sex_seg == 0, 1, 0)
+    background_mask = np.logical_and(np.logical_not(sex_seg==0),np.array(img,dtype=bool))
     if noise_level == None:
         background_std = np.std(img * background_mask)
     else:
