@@ -39,8 +39,8 @@ def loglikelihood_fn(xin, yin, features, hparams):
     # Compute FFT normalization factor
     x = tf.transpose(xin,[0,3,1,2])
     y = tf.transpose(yin,[0,3,1,2])
-    x = tf.transpose(tf.spectral.rfft2d(x),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(tf.reshape(features['ps'],tf.spectral.rfft2d(x).get_shape()))),0.) / size**2 * (2*np.pi)**2
-    y = tf.transpose(tf.spectral.rfft2d(y),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(tf.reshape(features['ps'],tf.spectral.rfft2d(y).get_shape()))),0.) / size**2 * (2*np.pi)**2
+    x = tf.transpose(tf.spectral.rfft2d(x),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(tf.reshape(features['ps'],tf.transpose(tf.spectral.rfft2d(x),[0,2,3,1]).get_shape().as_list()))),0.) / size**2 * (2*np.pi)**2
+    y = tf.transpose(tf.spectral.rfft2d(y),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(tf.reshape(features['ps'],tf.transpose(tf.spectral.rfft2d(x),[0,2,3,1]).get_shape().as_list()))),0.) / size**2 * (2*np.pi)**2
 
     pz = 0.5 * tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2, -3]) #/ size**2
     return -pz
