@@ -125,7 +125,10 @@ def autoencoder_body(self, features):
                                  activation=output_activation)
       hub.add_signature(inputs=input_layer, outputs=reconstr)
       hub.attach_message("stamp_size", tf.train.Int64List(value=[hparams.problem_hparams.img_len]))
-      hub.attach_message("pixel_size", tf.train.FloatList(value=[hparams.problem_hparams.pixel_scale[res] for res in hparams.problem_hparams.resolutions]))
+      if hparams.problem_hparams.resolutions:
+        hub.attach_message("pixel_size", tf.train.FloatList(value=[hparams.problem_hparams.pixel_scale[res] for res in hparams.problem_hparams.resolutions]))
+      else:
+        hub.attach_message("pixel_size", tf.train.FloatList(value=[hparams.problem_hparams.pixel_scale]))
     spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
     decoder = hub.Module(spec, name="decoder_module")
     hub.register_module_for_export(decoder, "decoder")
