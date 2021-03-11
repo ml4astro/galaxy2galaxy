@@ -142,7 +142,7 @@ def _float_feature(value):
 def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
-def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, flux_r = [1.0], attributes=None):
+def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux_r = [1.0], attributes=None):
     """
     Draws the galaxy, psf and noise power spectrum on a postage stamp and
     encodes it to be exported in a TFRecord.
@@ -150,10 +150,10 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, flux_r = [1.0], att
     # Apply the PSF
     gal = galsim.Convolve(gal, psf)
 
-    im_multi = np.zeros((stamp_size,stamp_size,self.num_bands))
-    psf_multi = np.zeros((stamp_size,stamp_size,self.num_bands))
+    im_multi = np.zeros((stamp_size,stamp_size,num_bands))
+    psf_multi = np.zeros((stamp_size,stamp_size,num_bands))
     # Draw the Fourier domain image of the galaxy
-    for i in self.num_bands:
+    for i in num_bands:
         imC = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
                              np.pi / (pixel_scale * stamp_size))
 
