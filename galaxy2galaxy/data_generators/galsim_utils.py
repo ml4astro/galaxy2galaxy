@@ -107,7 +107,7 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 image_key="ps/encoded",
                 format_key="ps/format",
                 # channels=self.num_bands,
-                shape=[p.img_len, p.img_len // 2 + 1],
+                shape=[p.img_len, p.img_len // 2 + 1,self.num_bands],
                 dtype=tf.float32),
     }
 
