@@ -152,6 +152,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
 
     im_multi = np.zeros((stamp_size,stamp_size,num_bands))
     psf_multi = np.zeros((stamp_size,stamp_size,num_bands))
+    ps_multi = np.zeros((stamp_size,stamp_size//2+1,num_bands))
     # Draw the Fourier domain image of the galaxy
     for i in range(num_bands):
         imC = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
@@ -178,27 +179,27 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
         im_multi[:,:,i] = im
         psf_multi[:,:,i] = im_psf
 
+        # Compute noise power spectrum
+        ps = gal_temp.noise._get_update_rootps((stamp_size, stamp_size),
+                                          wcs=galsim.PixelScale(pixel_scale))
 
-    # Compute noise power spectrum
-    ps = gal.noise._get_update_rootps((stamp_size, stamp_size),
-                                      wcs=galsim.PixelScale(pixel_scale))
+        # The following comes from correlatednoise.py
+        rt2 = np.sqrt(2.)
+        shape = (stamp_size, stamp_size)
+        ps[0, 0] = rt2 * ps[0, 0]
+        # Then make the changes necessary for even sized arrays
+        if shape[1] % 2 == 0:  # x dimension even
+            ps[0, shape[1] // 2] = rt2 * ps[0, shape[1] // 2]
+        if shape[0] % 2 == 0:  # y dimension even
+            ps[shape[0] // 2, 0] = rt2 * ps[shape[0] // 2, 0]
+            # Both dimensions even
+            if shape[1] % 2 == 0:
+                ps[shape[0] // 2, shape[1] // 2] = rt2 * \
+                    ps[shape[0] // 2, shape[1] // 2]
 
-    # The following comes from correlatednoise.py
-    rt2 = np.sqrt(2.)
-    shape = (stamp_size, stamp_size)
-    ps[0, 0] = rt2 * ps[0, 0]
-    # Then make the changes necessary for even sized arrays
-    if shape[1] % 2 == 0:  # x dimension even
-        ps[0, shape[1] // 2] = rt2 * ps[0, shape[1] // 2]
-    if shape[0] % 2 == 0:  # y dimension even
-        ps[shape[0] // 2, 0] = rt2 * ps[shape[0] // 2, 0]
-        # Both dimensions even
-        if shape[1] % 2 == 0:
-            ps[shape[0] // 2, shape[1] // 2] = rt2 * \
-                ps[shape[0] // 2, shape[1] // 2]
-
-    # Apply mask to power spectrum so that it is very large outside maxk
-    ps = np.where(mask, np.log(ps**2), 10).astype('float32')
+        # Apply mask to power spectrum so that it is very large outside maxk
+        ps = np.where(mask, np.log(ps**2), 10).astype('float32')
+        ps_multi[:,i] = ps 
 
     serialized_output = {"image/encoded": [im_multi.tostring()],
             "image/format": ["raw"],
