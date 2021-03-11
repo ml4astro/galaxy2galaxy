@@ -153,7 +153,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
     im_multi = np.zeros((stamp_size,stamp_size,num_bands))
     psf_multi = np.zeros((stamp_size,stamp_size,num_bands))
     # Draw the Fourier domain image of the galaxy
-    for i in num_bands:
+    for i in range(num_bands):
         imC = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
                              np.pi / (pixel_scale * stamp_size))
 
