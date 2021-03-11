@@ -551,7 +551,8 @@ class Img2imgCosmosMultiband(galsim_utils.GalsimProblem):
                                                stamp_size=p.img_len,
                                                pixel_scale=p.pixel_scale,
                                                attributes=attributes,
-                                               flux_r=p.flux_ratio)
+                                               flux_r=p.flux_ratio,
+                                               num_bands=self.num_bands)
 
   def preprocess_example(self, example, unused_mode, unused_hparams):
     """ Preprocess the examples, can be used for further augmentation or
