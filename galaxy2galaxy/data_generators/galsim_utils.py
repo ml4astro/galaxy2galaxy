@@ -142,7 +142,7 @@ def _float_feature(value):
 def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
-def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
+def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, flux_r = [1.0], attributes=None):
     """
     Draws the galaxy, psf and noise power spectrum on a postage stamp and
     encodes it to be exported in a TFRecord.
@@ -150,27 +150,34 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     # Apply the PSF
     gal = galsim.Convolve(gal, psf)
 
+    im_multi = np.zeros((stamp_size,stamp_size,num_bands))
+    psf_multi = np.zeros((stamp_size,stamp_size,num_bands))
     # Draw the Fourier domain image of the galaxy
-    imC = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
-                         np.pi / (pixel_scale * stamp_size))
+    for i in self.num_bands:
+        imC = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
+                             np.pi / (pixel_scale * stamp_size))
 
-    imCp = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
-                          np.pi / (pixel_scale * stamp_size))
+        imCp = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
+                              np.pi / (pixel_scale * stamp_size))
+        gal_temp = gal/flux_r[i]
+        gal_temp.drawKImage(image=imC)
+        psf.drawKImage(image=imCp)
 
-    gal.drawKImage(image=imC)
-    psf.drawKImage(image=imCp)
+        # Keep track of the pixels with 0 value
+        mask = ~(np.fft.fftshift(imC.array)[:, :(stamp_size) // 2 + 1] == 0)
 
-    # Keep track of the pixels with 0 value
-    mask = ~(np.fft.fftshift(imC.array)[:, :(stamp_size) // 2 + 1] == 0)
+        # Inverse Fourier transform of the image
+        # TODO: figure out why we need 2 fftshifts....
+        im = np.fft.fftshift(np.fft.ifft2(
+            np.fft.fftshift(imC.array))).real.astype('float32')
 
-    # Inverse Fourier transform of the image
-    # TODO: figure out why we need 2 fftshifts....
-    im = np.fft.fftshift(np.fft.ifft2(
-        np.fft.fftshift(imC.array))).real.astype('float32')
+        # Transform the psf array into proper format for Theano
+        im_psf = np.fft.fftshift(np.fft.ifft2(
+                np.fft.fftshift(imCp.array))).real.astype('float32')
 
-    # Transform the psf array into proper format for Theano
-    im_psf = np.fft.fftshift(np.fft.ifft2(
-            np.fft.fftshift(imCp.array))).real.astype('float32')
+        im_multi[:,:,i] = im
+        psf_multi[:,:,i] = im_psf
+
 
     # Compute noise power spectrum
     ps = gal.noise._get_update_rootps((stamp_size, stamp_size),
@@ -193,9 +200,9 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, attributes=None):
     # Apply mask to power spectrum so that it is very large outside maxk
     ps = np.where(mask, np.log(ps**2), 10).astype('float32')
 
-    serialized_output = {"image/encoded": [im.tostring()],
+    serialized_output = {"image/encoded": [im_multi.tostring()],
             "image/format": ["raw"],
-            "psf/encoded": [im_psf.tostring()],
+            "psf/encoded": [psf_multi.tostring()],
             "psf/format": ["raw"],
             "ps/encoded": [ps.tostring()],
             "ps/format": ["raw"]}
