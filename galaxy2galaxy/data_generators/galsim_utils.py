@@ -205,7 +205,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
             "image/format": ["raw"],
             "psf/encoded": [psf_multi.tostring()],
             "psf/format": ["raw"],
-            "ps/encoded": [ps.tostring()],
+            "ps/encoded": [ps_multi.tostring()],
             "ps/format": ["raw"]}
 
     # Adding the parameters provided
