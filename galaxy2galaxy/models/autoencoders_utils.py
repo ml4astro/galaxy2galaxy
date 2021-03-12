@@ -44,6 +44,7 @@ def loglikelihood_fn(xin, yin, features, hparams):
     y = tf.transpose(tf.spectral.rfft2d(y),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(ps)),0.) / size**2 * (2*np.pi)**2
 
     pz = 0.5 * tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2, -3]) #/ size**2
+    tf.print(-pz)
     return -pz
   elif hparams.likelihood_type == 'Pixel':
     # TODO: include per example noise std
