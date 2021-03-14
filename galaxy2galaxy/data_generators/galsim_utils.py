@@ -201,7 +201,8 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
         ps = np.where(mask, np.log(ps**2), 10).astype('float32')
         ps_multi[:,:,i] = ps 
 
-    print(ps_multi)
+    print(ps_multi.shape)
+    print(num_bands)
 
     serialized_output = {"image/encoded": [im_multi.tostring()],
             "image/format": ["raw"],
