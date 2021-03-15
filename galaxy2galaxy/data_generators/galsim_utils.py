@@ -92,21 +92,21 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
         "inputs": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="image/encoded",
                 format_key="image/format",
-                # channels=self.num_bands,
+                channels=self.num_bands,
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
         "psf": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="psf/encoded",
                 format_key="psf/format",
-                # channels=self.num_bands,
+                channels=self.num_bands,
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="ps/encoded",
                 format_key="ps/format",
-                # channels=self.num_bands,
+                channels=self.num_bands,
                 shape=[p.img_len, p.img_len // 2 + 1,self.num_bands],
                 dtype=tf.float32),
     }
@@ -201,8 +201,10 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
         ps = np.where(mask, np.log(ps**2), 10).astype('float32')
         ps_multi[:,:,i] = ps 
 
-    print(ps_multi.shape)
-    print(num_bands)
+    if num_bands == 1:
+        im_multi = np.squeeze(im_multi)
+        psf_multi = np.squeeze(psf_multi)
+        ps_multi = np.squeeze(ps_multi)
 
     serialized_output = {"image/encoded": [im_multi.tostring()],
             "image/format": ["raw"],
