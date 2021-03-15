@@ -574,7 +574,7 @@ class Img2imgCosmosMultiband(galsim_utils.GalsimProblem):
 
 
 @registry.register_problem
-class Attrs2imgCosmosMultiband64(Img2imgCosmosMultiband64):
+class Attrs2imgCosmosMultiband64(Img2imgCosmosMultiband):
   """ Smaller version of the Img2imgCosmos problem, at half the pixel
   resolution
   """
