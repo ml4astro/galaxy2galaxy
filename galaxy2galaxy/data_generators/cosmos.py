@@ -574,14 +574,14 @@ class Img2imgCosmosMultiband(galsim_utils.GalsimProblem):
 
 
 @registry.register_problem
-class Attrs2imgCosmosMultiband64(Img2imgCosmos64):
+class Attrs2imgCosmosMultiband64(Img2imgCosmosMultiband64):
   """ Smaller version of the Img2imgCosmos problem, at half the pixel
   resolution
   """
   @property
   def num_bands(self):
     """Number of bands."""
-    return 2
+    return 1
 
   def eval_metrics(self):
     eval_metrics = [ ]
@@ -592,7 +592,7 @@ class Attrs2imgCosmosMultiband64(Img2imgCosmos64):
     p.pixel_scale = 0.1
     p.img_len = 64
     p.example_per_shard = 1000
-    p.flux_ratio = [1,0.5]
+    p.flux_ratio = [1]
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
