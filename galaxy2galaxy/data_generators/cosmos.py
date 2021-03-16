@@ -581,7 +581,7 @@ class Attrs2imgCosmosMultiband64(Img2imgCosmosMultiband):
   @property
   def num_bands(self):
     """Number of bands."""
-    return 1
+    return 2
 
   def eval_metrics(self):
     eval_metrics = [ ]
@@ -592,7 +592,7 @@ class Attrs2imgCosmosMultiband64(Img2imgCosmosMultiband):
     p.pixel_scale = 0.1
     p.img_len = 64
     p.example_per_shard = 1000
-    p.flux_ratio = [1]
+    p.flux_ratio = [1,0.5]
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}

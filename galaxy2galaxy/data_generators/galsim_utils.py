@@ -206,11 +206,11 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
         psf_multi = np.squeeze(psf_multi)
         ps_multi = np.squeeze(ps_multi)
 
-    serialized_output = {"image/encoded": [im_multi.tostring()],
+    serialized_output = {"image/encoded": [im_multi.astype('float32').tostring()],
             "image/format": ["raw"],
-            "psf/encoded": [psf_multi.tostring()],
+            "psf/encoded": [psf_multi.astype('float32').tostring()],
             "psf/format": ["raw"],
-            "ps/encoded": [ps_multi.tostring()],
+            "ps/encoded": [ps_multi.astype('float32').tostring()],
             "ps/format": ["raw"]}
 
     # Adding the parameters provided
