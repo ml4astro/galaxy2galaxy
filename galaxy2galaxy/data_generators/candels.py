@@ -515,6 +515,7 @@ class Img2imgCandelsGoods(astroimage_utils.AstroImageProblem):
 
     # Clip to 1 the values of the image
     # image = tf.clip_by_value(image, -1, 1)
+    image = tf.keras.preprocessing.image.random_rotation(image,360,row_axis=0,col_axis=1,channel_axis=2)
 
     # Aggregate the conditions
     if hasattr(p, 'attributes'):

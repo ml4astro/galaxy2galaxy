@@ -92,21 +92,21 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
         "inputs": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="image/encoded",
                 format_key="image/format",
-                channels=self.num_bands,
+                channels=None,
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
         "psf": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="psf/encoded",
                 format_key="psf/format",
-                channels=self.num_bands,
+                channels=None,
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="ps/encoded",
                 format_key="ps/format",
-                channels=self.num_bands,
+                channels=None,
                 shape=[p.img_len, p.img_len // 2 + 1,self.num_bands],
                 dtype=tf.float32),
     }

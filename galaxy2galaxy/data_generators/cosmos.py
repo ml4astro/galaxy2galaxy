@@ -534,10 +534,10 @@ class Img2imgCosmosMultiband(galsim_utils.GalsimProblem):
 
       # Apply rotation so that the galaxy is at 0 PA
 #       if hasattr(p, "rotation") and p.rotation:
-      rotation_angle = galsim.Angle(-cat_param[ind]['sersic_beta'],
-                                      galsim.radians)
-      gal = gal.rotate(rotation_angle)
-      psf = psf.rotate(rotation_angle)
+      # rotation_angle = galsim.Angle(-cat_param[ind]['sersic_beta'],
+      #                                 galsim.radians)
+      # gal = gal.rotate(rotation_angle)
+      # psf = psf.rotate(rotation_angle)
 
       # We save the corresponding attributes for this galaxy
       if hasattr(p, 'attributes'):
@@ -561,6 +561,7 @@ class Img2imgCosmosMultiband(galsim_utils.GalsimProblem):
     p = self.get_hparams()
     image = example["inputs"]
 
+    image = tf.keras.preprocessing.image.random_rotation(image,360,row_axis=0,col_axis=1,channel_axis=2)
     # Clip to 1 the values of the image
     # image = tf.clip_by_value(image, -1, 1)
 
@@ -592,7 +593,7 @@ class Attrs2imgCosmosMultiband64(Img2imgCosmosMultiband):
     p.pixel_scale = 0.1
     p.img_len = 64
     p.example_per_shard = 1000
-    p.flux_ratio = [1,0.5]
+    p.flux_ratio = [1,1]
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
