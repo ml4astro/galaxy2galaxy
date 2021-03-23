@@ -279,3 +279,21 @@ def maybe_download_cosmos(target_dir, sample="25.2"):
     if do_remove:
         logger.info("Removing the tarball to save space")
         os.remove(target)
+
+def tf_rotate(input_image, min_angle = -np.pi/2, max_angle = np.pi/2):
+  '''
+  Tensorflow rotates the image randomly
+  : param input_image: image input
+  : param min_angle: minimum rotation angle
+  : param max? Angle: maximum rotation angle
+  : Return: rotated image
+  '''
+  distorted_image = tf.expand_dims(input_image, 0)
+  random_angles = tf.random.uniform(shape=(tf.shape(distorted_image)[0],), minval = min_angle , maxval = max_angle)
+  distorted_image = tf.contrib.image.transform(
+    distorted_image,
+    tf.contrib.image.angles_to_projective_transforms(
+      random_angles, tf.cast(tf.shape(distorted_image)[1], tf.float32), tf.cast(tf.shape(distorted_image)[2], tf.float32)
+    ))
+  rotate_image = tf.squeeze(distorted_image, [0])
+  return rotate_image

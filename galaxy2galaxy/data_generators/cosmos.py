@@ -561,7 +561,7 @@ class Img2imgCosmosMultiband(galsim_utils.GalsimProblem):
     p = self.get_hparams()
     image = example["inputs"]
 
-    image = tf.keras.preprocessing.image.random_rotation(image,360,row_axis=0,col_axis=1,channel_axis=2)
+    image = galsim_utils.tf_rotate(image)
     # Clip to 1 the values of the image
     # image = tf.clip_by_value(image, -1, 1)
 
