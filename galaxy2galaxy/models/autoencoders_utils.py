@@ -272,7 +272,7 @@ def autoencoder_body(self, features):
     # reconstr_t = tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded_t)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded_t)), tf.complex64))
     # reconstr = tf.transpose(reconstr_t, perm=[0, 2, 3, 1])
     # reconstr = reconstr[:, :shape[1], :shape[2], :]
-    for i in shape[3]:
+    for i in range(shape[3]):
       reconstr[...,i] = convolve(reconstr[...,i], tf.cast(features['psf'][...,i], tf.complex64),
                           zero_padding_factor=1)
 
