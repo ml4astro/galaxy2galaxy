@@ -272,9 +272,11 @@ def autoencoder_body(self, features):
     # reconstr_t = tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded_t)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded_t)), tf.complex64))
     # reconstr = tf.transpose(reconstr_t, perm=[0, 2, 3, 1])
     # reconstr = reconstr[:, :shape[1], :shape[2], :]
+    output_list = []
     for i in range(shape[3]):
-      reconstr[...,i] = tf.squeeze(convolve(tf.expand_dims(reconstr[...,i],-1), tf.cast(features['psf'][...,i], tf.complex64),
-                          zero_padding_factor=1))
+      output_list.append(tf.squeeze(convolve(tf.expand_dims(reconstr[...,i],-1), tf.cast(features['psf'][...,i], tf.complex64),
+                          zero_padding_factor=1)))
+    reconstr = tf.stack(output_list)
 
   # Losses.
   losses = {
