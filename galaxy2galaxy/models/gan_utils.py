@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_gan as tfgan
 import tensorflow_hub as hub
@@ -18,6 +19,7 @@ from tensor2tensor.utils import t2t_model
 from tensor2tensor.layers import common_layers
 
 from galaxy2galaxy.layers import spectral_ops as ops
+from galflow import convolve
 
 
 class AbstractGAN(t2t_model.T2TModel):
@@ -116,7 +118,21 @@ class AbstractGAN(t2t_model.T2TModel):
     generator_module = hub.Module(gen_spec, name="Generator_Module", trainable=True)
 
     # Wraps the modules into functions expected by TF-GAN
-    generator = lambda code, mode: generator_module(code)
+    def generator(code, mode):
+      p = hparams
+      out = generator_module(code)
+      shape = common_layers.shape_list(out)
+      # Applying convolution by PSF convolution
+      if p.apply_psf and 'psf' in features:
+        out = convolve(out, tf.cast(features['psf'][...,0], tf.complex64))
+
+      # Adds noise according to the provided power spectrum
+      noise = tf.spectral.rfft2d(tf.random_normal(out.get_shape()[:3]))
+      thresholded_ps = tf.where(features['ps'] >= 9, tf.zeros_like(features['ps']), tf.sqrt(tf.exp(features['ps'])))
+      noise = noise*tf.cast(thresholded_ps, tf.complex64)
+      out = out + tf.expand_dims(tf.spectral.irfft2d(noise), axis=-1)
+      return out
+
     discriminator =  lambda image, conditioning, mode: discriminator_module(image)
 
     # Make GANModel, which encapsulates the GAN model architectures.

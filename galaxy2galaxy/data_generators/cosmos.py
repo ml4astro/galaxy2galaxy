@@ -17,6 +17,8 @@ from tensor2tensor.utils import metrics
 
 from galaxy2galaxy.utils import registry
 
+from astropy.io import fits
+import numpy as np
 import tensorflow as tf
 import galsim
 
@@ -105,37 +107,16 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     cat_param = append_fields(cat_param, 'sersic_n', sparams[:,2])
     cat_param = append_fields(cat_param, 'sersic_beta', sparams[:,7])
 
-    passed = 0
-    
-    late = 0
-    irr = 0
+
     for ind in index:
       # Draw a galaxy using GalSim, any kind of operation can be done here
-#       if cat_param['Mph3'][ind] not in [1,2,3] :
-#             passed += 1
-#             continue
-
-#       if cat_param['Mph3'][ind] == 2:
-#         if late >= 85 :
-#             if ind % 200 == 0:
-#                 print("done all the late of the id")
-#             continue
-#         late += 1
-      
-#       if cat_param['Mph3'][ind] == 3:
-#         if irr >= 85 :
-#             if ind % 200 == 0:
-#                 print("done all the irr of the id")
-#             continue
-#         irr += 1
-        
-      gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale)
+      gal = catalog.makeGalaxy(ind, noise_pad_size=p.img_len * p.pixel_scale*2)
 
       # We apply the orginal psf if a different PSF is not requested
-      if ~hasattr(p, "psf") or p.psf is None:
-          psf = gal.original_psf
+      if hasattr(p, "psf"):
+        psf = p.psf
       else:
-          psf = p.psf
+        psf = gal.original_psf
 
       # Apply rotation so that the galaxy is at 0 PA
 #       if hasattr(p, "rotation") and p.rotation:
@@ -190,7 +171,7 @@ class Img2imgCosmosHSC(Img2imgCosmos):
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
                     "targets": None}
-    p.psf = galsim.InterpolatedImage(os.path.join(_COSMOS_DATA_DIR, 'hst_cosmos_effective_psf.fits'), scale=0.03)
+    p.psf = galsim.InterpolatedKImage(galsim.ImageCD(fits.getdata(os.path.join(_COSMOS_DATA_DIR, 'hsc_hann_window.fits'))+0j, scale=0.2921868167401221))
     p.rotation = True
 
   def preprocess_example(self, example, unused_mode, unused_hparams):
@@ -254,6 +235,10 @@ class Img2imgCosmos128(Img2imgCosmos):
   """ Smaller version of the Img2imgCosmos problem, at half the pixel
   resolution
   """
+
+  def eval_metrics(self):
+    eval_metrics = [ ]
+    return eval_metrics
 
   def hparams(self, defaults, model_hparams):
     p = defaults
@@ -394,7 +379,7 @@ class Attrs2imgCosmos64EuclidWithMorpho(Img2imgCosmos128):
                     "attributes": None,
                     "targets": None}
     p.attributes = ['mag_auto', 'flux_radius', 'sersic_n', 'sersic_q', 'Mph3']
-    
+
 
 @registry.register_problem
 class Attrs2imgCosmos32(Attrs2imgCosmos):

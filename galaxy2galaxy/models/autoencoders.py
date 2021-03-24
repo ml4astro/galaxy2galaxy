@@ -208,8 +208,15 @@ def continuous_autoencoder_basic():
   hparams.add_hparam("apply_psf", True)  # Should we apply the PSF at the decoder
   hparams.add_hparam("psf_convolution_pad_factor", 0.)  # Zero padding factor for convolution
 
+  # hparams related to output apodization for Fourier purposes
+  hparams.add_hparam("output_apodization", 8)  # Number of pixels at the border affected by the apodization window
+  hparams.add_hparam("apodization_loss", 1.0)  # Factor to penalize non zero borders
+
   # hparams related to output activation
   hparams.add_hparam("output_activation", 'softplus') # either none or softplus
+
+  # hparams related to additional regularization of the output
+  hparams.add_hparam("total_variation_loss", 0.001) # Factor to apply to a loss penalizing the TV of the unconvolved image
 
   # hparams related to the likelihood
   hparams.add_hparam("likelihood_type", "Fourier") # Pixel or Fourier
@@ -250,11 +257,11 @@ def continuous_autoencoder_residual_128():
   hparams.learning_rate_constant = 0.35
   hparams.learning_rate_warmup_steps = 500
   hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
-  hparams.num_hidden_layers = 6
-  hparams.hidden_size = 64
-  hparams.max_hidden_size = 1024
-  hparams.batch_size = 64
-  hparams.bottleneck_bits = 32
+  hparams.num_hidden_layers = 7
+  hparams.hidden_size = 32
+  hparams.max_hidden_size = 512
+  hparams.batch_size = 32
+  hparams.bottleneck_bits = 64
 
   hparams.bottleneck_warmup_steps = 2000
 

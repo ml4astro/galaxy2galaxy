@@ -101,8 +101,8 @@ def main(_):
   run_config = t2t_trainer.create_run_config(hparams)
 
   estimator = create_estimator(run_config, hparams)
-  problem = registry.problem(FLAGS.problem)
-  problem.hparams(hparams,None)
+  hparams.img_len = problem.get_hparams().img_len
+  hparams.attributes = problem.get_hparams().attributes
 
   # Use tf hub to export any module that has been registered
   exporter = hub.LatestModuleExporter("tf_hub",

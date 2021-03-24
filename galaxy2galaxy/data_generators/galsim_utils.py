@@ -18,7 +18,7 @@ import os
 import sys
 import galsim
 import argparse
-
+from galsim.bounds import _BoundsI
 
 class GalsimProblem(astroimage_utils.AstroImageProblem):
   """Base class for image problems generated with GalSim.
@@ -100,7 +100,8 @@ class GalsimProblem(astroimage_utils.AstroImageProblem):
                 image_key="psf/encoded",
                 format_key="psf/format",
                 channels=None,
-                shape=[p.img_len, p.img_len, self.num_bands],
+                # The factor 2 here is to account for x2 interpolation
+                shape=[2*p.img_len, 2*p.img_len // 2 + 1, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
@@ -147,6 +148,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
     Draws the galaxy, psf and noise power spectrum on a postage stamp and
     encodes it to be exported in a TFRecord.
     """
+
     # Apply the PSF
     gal = galsim.Convolve(gal, psf)
 
@@ -155,33 +157,37 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
     ps_multi = np.zeros((stamp_size,stamp_size//2+1,num_bands))
     # Draw the Fourier domain image of the galaxy
     for i in range(num_bands):
-        imC = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
-                             np.pi / (pixel_scale * stamp_size))
+        # Draw a kimage of the galaxy, just to figure out what maxk is, there might
+        # be more efficient ways to do this though...
+        bounds = _BoundsI(0, stamp_size//2, -stamp_size//2, stamp_size//2-1)
+        imG = gal.drawKImage(bounds=bounds,
+                             scale=2.*np.pi/(stamp_size * pixel_scale),
+                             recenter=False)
+        mask = ~(np.fft.fftshift(imG.array, axes=0) == 0)
 
-        imCp = galsim.ImageCF(stamp_size, stamp_size, scale=2. *
-                              np.pi / (pixel_scale * stamp_size))
-        gal_temp = gal/flux_r[i]
-        gal_temp.drawKImage(image=imC)
-        psf.drawKImage(image=imCp)
+        # We draw the pixel image of the convolved image
+        im = gal.drawImage(nx=stamp_size, ny=stamp_size, scale=pixel_scale,
+                           method='no_pixel', use_true_center=False).array.astype('float32')
 
-        # Keep track of the pixels with 0 value
-        mask = ~(np.fft.fftshift(imC.array)[:, :(stamp_size) // 2 + 1] == 0)
+        # Draw the Fourier domain image of the galaxy, using x1 zero padding,
+        # and x2 subsampling
+        interp_factor=2
+        padding_factor=1
+        Nk = stamp_size*interp_factor*padding_factor
+        bounds = _BoundsI(0, Nk//2, -Nk//2, Nk//2-1)
+        imCp = psf.drawKImage(bounds=bounds,
+                             scale=2.*np.pi/(Nk * pixel_scale / interp_factor),
+                             recenter=False)
 
-        # Inverse Fourier transform of the image
-        # TODO: figure out why we need 2 fftshifts....
-        im = np.fft.fftshift(np.fft.ifft2(
-            np.fft.fftshift(imC.array))).real.astype('float32')
-
-        # Transform the psf array into proper format for Theano
-        im_psf = np.fft.fftshift(np.fft.ifft2(
-                np.fft.fftshift(imCp.array))).real.astype('float32')
+        # Transform the psf array into proper format, remove the phase
+        im_psf = np.abs(np.fft.fftshift(imCp.array, axes=0)).astype('float32')
 
         im_multi[:,:,i] = im
         psf_multi[:,:,i] = im_psf
-
-        # Compute noise power spectrum
-        ps = gal_temp.noise._get_update_rootps((stamp_size, stamp_size),
-                                          wcs=galsim.PixelScale(pixel_scale))
+        # Compute noise power spectrum, at the resolution and stamp size of target
+        # image
+        ps = gal.noise._get_update_rootps((stamp_size, stamp_size),
+                                           wcs=galsim.PixelScale(pixel_scale))
 
         # The following comes from correlatednoise.py
         rt2 = np.sqrt(2.)
