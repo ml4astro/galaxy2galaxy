@@ -273,8 +273,8 @@ def autoencoder_body(self, features):
     # reconstr = tf.transpose(reconstr_t, perm=[0, 2, 3, 1])
     # reconstr = reconstr[:, :shape[1], :shape[2], :]
     for i in range(shape[3]):
-      reconstr = convolve(reconstr, tf.cast(features['psf'], tf.complex64),
-                          zero_padding_factor=1)
+      reconstr[...,i] = tf.squeeze(convolve(tf.expand_dims(reconstr[...,i],-1), tf.cast(features['psf'][...,i], tf.complex64),
+                          zero_padding_factor=1))
 
   # Losses.
   losses = {
