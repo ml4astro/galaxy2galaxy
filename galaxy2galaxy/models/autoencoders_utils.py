@@ -49,17 +49,17 @@ def loglikelihood_fn(xin, yin, features, hparams):
     return -pz
   elif hparams.likelihood_type == 'Pixel':
     # TODO: include per example noise std
-    pz = 0.5 * tf.reduce_sum(tf.abs(xin[:,:,:,0] - yin[...,0])**2, axis=[-1, -2]) / hparams.noise_rms**2 #/ size**2
+    pz = 0.5 * tf.reduce_sum(tf.abs(xin - yin)**2, axis=[-1, -2, -3]) / hparams.noise_rms**2 #/ size**2
     return -pz
   else:
     raise NotImplementedError
 
 def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4):
   """Helper for image summaries that are safe on TPU."""
-  if len(image_logits.get_shape()) != 4 or not image_logits.get_shape()[3] in [1,3,4]:
+  if len(image_logits.get_shape()) != 4:
     tf.logging.info("Not generating image summary, maybe not an image.")
     return
-  return tf.summary.image(name, pack_images(image_logits, rows, cols),
+  return tf.summary.image(name, pack_images(tf.expand_dims(image_logits[...,0],-1), rows, cols)
       max_outputs=max_outputs)
 
 def autoencoder_body(self, features):
@@ -276,7 +276,8 @@ def autoencoder_body(self, features):
     for i in range(shape[3]):
       output_list.append(tf.squeeze(convolve(tf.expand_dims(reconstr[...,i],-1), tf.cast(features['psf'][...,i], tf.complex64),
                           zero_padding_factor=1)))
-    reconstr = tf.stack(output_list)
+    reconstr = tf.stack(output_list,axis=-1)
+    reconstr = tf.reshape(reconstr,shape)
 
   # Losses.
   losses = {

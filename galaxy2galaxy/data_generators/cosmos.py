@@ -66,7 +66,7 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
 
   def generator(self, data_dir, tmp_dir, dataset_split, task_id=-1):
     """
-    Generates and yields poattrs2img_cosmos64_euclid_pixscale_1_wmorpho_2stage stamps obtained with GalSim.
+    Generates and yields postage stamps obtained with GalSim.
     """
     p = self.get_hparams()
 
