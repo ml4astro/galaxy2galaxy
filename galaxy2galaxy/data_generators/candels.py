@@ -117,17 +117,16 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     
     ''' Load the psfs for each filter and resize'''
     cube_psf = np.zeros((2*p.img_len, 2*p.img_len // 2 + 1, band_num))
-    bounds = galsim.bounds._BoundsI(0, p.img_len//2, -p.img_len//2, p.img_len//2-1)
-
+    interp_factor=2
+    padding_factor=1
+    Nk = p.img_len*interp_factor*padding_factor
+    bounds = galsim.bounds._BoundsI(0, Nk//2, -Nk//2, Nk//2-1)
     k = 0
     for res in p.resolutions:
         cube_psf_tmp = np.zeros((2*p.img_len, 2*p.img_len // 2 + 1, len(p.filters[res])))
         for i, filt in enumerate(p.filters[res]):
             psf = galsim.InterpolatedImage(data_dir + '/psfs/psf_' + filt +'.fits')
-            interp_factor=2
-            padding_factor=1
-            Nk = p.img_len*interp_factor*padding_factor
-            bounds = _BoundsI(0, Nk//2, -Nk//2, Nk//2-1)
+            
             imCp = psf.drawKImage(bounds=bounds,
                                  scale=2.*np.pi/(Nk * p.pixel_scale[res] / interp_factor),
                                  recenter=False)
