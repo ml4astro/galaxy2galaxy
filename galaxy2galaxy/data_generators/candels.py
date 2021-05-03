@@ -116,7 +116,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     
     ''' Load the psfs for each filter and resize'''
     cube_psf = np.zeros((2*p.img_len, 2*p.img_len // 2 + 1, band_num))
-    bounds = _BoundsI(0, p.stamp_size//2, -p.stamp_size//2, p.stamp_size//2-1)
+    bounds = galsim.bounds._BoundsI(0, p.stamp_size//2, -p.stamp_size//2, p.stamp_size//2-1)
 
     k = 0
     for res in p.resolutions:
