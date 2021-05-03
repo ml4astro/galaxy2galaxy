@@ -59,7 +59,7 @@ def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4):
   if len(image_logits.get_shape()) != 4:
     tf.logging.info("Not generating image summary, maybe not an image.")
     return
-  return tf.summary.image(name, pack_images(tf.expand_dims(image_logits[...,0],-1), rows, cols)
+  return tf.summary.image(name, pack_images(tf.expand_dims(image_logits[...,0],-1), rows, cols),
       max_outputs=max_outputs)
 
 def autoencoder_body(self, features):
