@@ -26,6 +26,7 @@ import h5py
 import glob
 import os
 import sys
+import galsim
 from skimage.transform import resize,rescale
 from scipy.ndimage import binary_dilation  # type: ignore
 from astropy.table import Table
