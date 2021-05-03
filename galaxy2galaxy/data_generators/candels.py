@@ -132,9 +132,10 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             cube_psf_tmp[:, :, i] = im_psf
         cube_psf_tmp = resize(cube_psf_tmp, (2*p.img_len, 2*p.img_len // 2 + 1,len(p.filters[res])))
         cube_psf[:,:,k:k+len(p.filters[res])] = cube_psf_tmp
-
         k += len(p.filters[res])
-        
+
+    psf = cube_psf
+    
     sigmas = p.sigmas
 
     # Step 2: Extract postage stamps, resize them to requested size
@@ -222,7 +223,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             ''' Create the output to match T2T format '''
             serialized_output = {"image/encoded": [im.astype('float32').tostring()],
             "image/format": ["raw"],
-            "psf/encoded": [im_psf.astype('float32').tostring()],
+            "psf/encoded": [psf.astype('float32').tostring()],
             "psf/format": ["raw"],
             "ps/encoded": [ps.astype('float32').tostring()],
             "ps/format": ["raw"],
