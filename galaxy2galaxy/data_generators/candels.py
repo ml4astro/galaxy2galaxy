@@ -134,9 +134,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
         cube_psf[:,:,k:k+len(p.filters[res])] = cube_psf_tmp
 
         k += len(p.filters[res])
-    
-    im_psf = _resize_image(cube_psf, p.img_len)
-    
+        
     sigmas = p.sigmas
 
     # Step 2: Extract postage stamps, resize them to requested size
