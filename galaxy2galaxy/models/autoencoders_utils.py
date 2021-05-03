@@ -257,6 +257,7 @@ def autoencoder_body(self, features):
   #tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2 + 1e-6), axis=[1,2,3])
   #tv = tf.reduce_mean(tv)
 
+  image_summary("without_psf",tf.reshape(reconstr, labels_shape))
   # Apply channel-wise convolution with the PSF if requested
   if hparams.apply_psf and 'psf' in features:
     # rec_padded = tf.pad(reconstr, [[0,0],

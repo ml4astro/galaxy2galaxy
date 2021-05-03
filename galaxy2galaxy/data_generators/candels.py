@@ -115,13 +115,22 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     all_cat['FIELD_1'][np.where(all_cat['FIELD_1']=='COSMOS   ')] = 'COSMOS'
     
     ''' Load the psfs for each filter and resize'''
-    cube_psf = np.zeros((167, 167, band_num))
+    cube_psf = np.zeros((2*p.img_len, 2*p.img_len // 2 + 1, band_num))
+    bounds = _BoundsI(0, p.stamp_size//2, -p.stamp_size//2, p.stamp_size//2-1)
+
     k = 0
     for res in p.resolutions:
-        cube_psf_tmp = np.zeros((167, 167, len(p.filters[res])))
+        cube_psf_tmp = np.zeros((2*p.img_len, 2*p.img_len // 2 + 1, len(p.filters[res])))
         for i, filt in enumerate(p.filters[res]):
-            cube_psf_tmp[:, :, i] = fits.open(data_dir + '/psfs/psf_' + filt +'.fits')[0].data
-        cube_psf_tmp = resize(cube_psf_tmp, (167,167,len(p.filters[res])))
+            psf = galsim.InterpolatedImage(data_dir + '/psfs/psf_' + filt +'.fits')
+            imCp = psf.drawKImage(bounds=bounds,
+                             scale=2.*np.pi/(Nk * pixel_scale / interp_factor),
+                             recenter=False)
+
+            # Transform the psf array into proper format, remove the phase
+            im_psf = np.abs(np.fft.fftshift(imCp.array, axes=0)).astype('float32')
+            cube_psf_tmp[:, :, i] = im_psf
+        cube_psf_tmp = resize(cube_psf_tmp, (2*p.img_len, 2*p.img_len // 2 + 1,len(p.filters[res])))
         cube_psf[:,:,k:k+len(p.filters[res])] = cube_psf_tmp
 
         k += len(p.filters[res])
@@ -303,7 +312,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 image_key="psf/encoded",
                 format_key="psf/format",
                 # channels=self.num_bands,
-                shape=[p.img_len, p.img_len, self.num_bands],
+                shape=[2*p.img_len, 2*p.img_len // 2 + 1, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
