@@ -150,6 +150,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     
     ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
     sub_cat = all_cat[np.where(np.isin(list(all_cat["FIELD_1"]),["GDS","GDN","EGS","COSMOS","UDS"]))]
+    sub_cat = sub_cat[np.where(sub_cat['mag'] <= 25.3)]
     assert(task_id > -1)
     n_shards = self.dataset_splits[0]["shards"] + self.dataset_splits[1]["shards"]
     indexes = list(range(task_id*len(sub_cat)//n_shards,
@@ -200,7 +201,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
             ''' Load the wanted physical parameters of the galaxy '''
             if hasattr(p, 'attributes'):
-                attributes = {k: float(all_cat[k][index]) for k in p.attributes}
+                attributes = {k: float(sub_cat[k][m]) for k in p.attributes}
 
             else:
                 attributes=None
@@ -217,7 +218,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             ps = np.transpose(ps,[1,2,0])
 
             ''' Add a flag corresponding to the field '''
-            field_info = np.asarray(1 if all_cat["FIELD_1"][m] == "GDS" else 0)
+            field_info = np.asarray(1 if sub_cat["FIELD_1"][m] == "GDS" else 0)
 
             sigmas_array = []
             for res in p.resolutions:
