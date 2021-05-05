@@ -125,7 +125,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
     for res in p.resolutions:
         cube_psf_tmp = np.zeros((2*p.img_len, 2*p.img_len // 2 + 1, len(p.filters[res])))
         for i, filt in enumerate(p.filters[res]):
-            psf = galsim.InterpolatedImage(data_dir + '/psfs/psf_' + filt +'.fits')
+            psf = galsim.InterpolatedImage(data_dir + '/psfs/psf_' + filt +'.fits',scale=0.06)
             
             imCp = psf.drawKImage(bounds=bounds,
                                  scale=2.*np.pi/(Nk * p.pixel_scale[res] / interp_factor),
