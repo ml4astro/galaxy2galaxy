@@ -198,6 +198,12 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             
             im = _resize_image(im, p.img_len)
             
+            #Check that there is still a galaxy
+            img_s = im[:,:,0].byteswap().newbyteorder()
+            bkg = sep.Background(img_s)
+            cat_s = sep.extract(img_s-bkg,sigma_sex,err=bkg.globalrms)  
+            if len(cat_s) == 0:
+                raise ValueError('No galaxy detected in the field')
 
             ''' Load the wanted physical parameters of the galaxy '''
             if hasattr(p, 'attributes'):
