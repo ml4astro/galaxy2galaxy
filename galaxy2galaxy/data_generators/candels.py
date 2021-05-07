@@ -524,10 +524,11 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
             if blend_flux/blended_galaxy_flux > 0.5:
               raise ValueError('Blending suspected')
 
-    '''Rotate'''
-    PA = cat[find_central(cat)[0]][4]
-    img_rotate = rotate(cleaned, PA, reshape=False)
+    # '''Rotate'''
+    # PA = cat[find_central(cat)[0]][4]
+    # img_rotate = rotate(cleaned, PA, reshape=False)
     
+    img_rotate = cleaned
     '''Add noise'''
     background_mask = np.logical_and(np.logical_not(sex_seg==0),np.array(img,dtype=bool))
     if noise_level == None:
