@@ -200,9 +200,9 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             
             #Check that there is still a galaxy
             img_s = im[:,:,0]
-            img_s = img_s.byteswap().newbyteorder()
+            img_s = img_s = img_s.copy(order='C')
             bkg = sep.Background(img_s)
-            cat_s = sep.extract(img_s-bkg,sigma_sex,err=bkg.globalrms)  
+            cat_s = sep.extract(img_s-bkg,2,err=bkg.globalrms)  
             if len(cat_s) == 0:
                 raise ValueError('No galaxy detected in the field')
 
