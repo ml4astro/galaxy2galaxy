@@ -218,7 +218,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             noise_im = np.zeros((p.img_len, p.img_len, band_num))
             for res in p.resolutions:
                 for n_filter in range(len(p.filters[res])):
-                    noise_im[:, :, n_filter+k] = np.random.normal(0, p.sigmas[res][n_filter], (p.img_len, p.img_len))
+                    noise_im[:, :, n_filter+k] = np.random.normal(0, bkg.globalrms, (p.img_len, p.img_len))
                 k+=1
             noise_im = np.transpose(noise_im,[2,0,1])
             ps = np.abs(np.fft.rfft2(noise_im))
