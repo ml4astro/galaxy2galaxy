@@ -300,5 +300,7 @@ def autoencoder_body(self, features):
 
   image_summary("ae", reconstr)
   image_summary("input", labels)
+  image_summary("input2", features["inputs"])
+  
 
   return logits, losses
