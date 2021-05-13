@@ -213,7 +213,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             else:
                 attributes=None
             
-#                 ''' Create the power spectrum '''
+            ''' Create the power spectrum '''
             k = 0
             noise_im = np.zeros((p.img_len, p.img_len, band_num))
             for res in p.resolutions:

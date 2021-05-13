@@ -56,12 +56,14 @@ def loglikelihood_fn(xin, yin, features, hparams):
 
 def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4):
   """Helper for image summaries that are safe on TPU."""
-  if len(image_logits.get_shape()) != 4:
+  shape = image_logits.get_shape()
+  if len(shape) != 4:
     tf.logging.info("Not generating image summary, maybe not an image.")
     return
-  return tf.summary.image(name, pack_images(tf.expand_dims(image_logits[...,0],-1), rows, cols),
+  for i in range(shape[3]):
+      tf.summary.image(name+'i', pack_images(tf.expand_dims(image_logits[...,i],-1), rows, cols),
       max_outputs=max_outputs)
-
+  return 0
 def autoencoder_body(self, features):
   """ Customized body function for autoencoders acting on continuous images.
   This is based on tensor2tensor.models.research.AutoencoderBasic.body
@@ -299,8 +301,6 @@ def autoencoder_body(self, features):
   logits = tf.reshape(reconstr, labels_shape)
 
   image_summary("ae", reconstr)
-  image_summary("input", labels)
-  image_summary("input2", features["inputs"])
-  
+  image_summary("input", labels)  
 
   return logits, losses
