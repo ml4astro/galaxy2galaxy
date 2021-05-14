@@ -218,7 +218,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             noise_im = np.zeros((p.img_len, p.img_len, band_num))
             for res in p.resolutions:
                 for n_filter in range(len(p.filters[res])):
-                    if bkg.globalrms > 0:
+                    if False:
                         noise_im[:, :, n_filter+k] = np.random.normal(0, bkg.globalrms, (p.img_len, p.img_len))
                     else:
                         noise_im[:, :, n_filter+k] = np.random.normal(0, p.sigmas[res][n_filter], (p.img_len, p.img_len))
@@ -541,4 +541,4 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
     random_background = np.random.normal(scale=background_std, size=img_rotate.shape)
     rotated = np.where(img_rotate == 0, random_background, img_rotate)
 
-    return rotated
+    return rotated/np.max(rotated)
