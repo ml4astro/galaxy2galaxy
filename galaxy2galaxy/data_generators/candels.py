@@ -163,6 +163,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             continue
         index = gal
         print(index)
+        target_flux_main_band = 10**(-0.4*(sub_cat['mag'][m]-p.zeropoint))
 
         try:
             ''' Loop on the filters '''
@@ -180,8 +181,12 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     # if np.max(fits.open(tmp_file)[0].data) == 0.:
                     #     sigmas[res][n_filter] = 10
                     im_import = fits.open(tmp_file)[0].data
-                    im_tmp[:, :, n_filter] = clean_rotate_stamp(im_import,sigma_sex=1.5)#,noise_level=p.sigmas[res][n_filter])
+                    cleaned_image = clean_rotate_stamp(im_import,sigma_sex=1.5)#,noise_level=p.sigmas[res][n_filter])
 
+                    if res == p.resolutions[0] and n_filter == 0:
+                        flux_ratio = target_flux_main_band/np.sum(cleaned_image)
+
+                    im_tmp[:, :, n_filter] = cleaned_image * flux_ratio
                     # except Exception:
                     #     print('Galaxy not seen in every filter')
                     #     continue
@@ -407,6 +412,7 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
     p.img_len = 64
     p.sigmas = {"high" : [0.004094741966557142], "low" : [0.004017507500562]}
     p.filters = {"high" : ['acs_f606w'], "low" : ['wfc3_f160w']}
+    p.zeropoint = 26.49
     p.resolutions = ["high","low"]
     p.example_per_shard = 1000
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
@@ -541,4 +547,4 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
     random_background = np.random.normal(scale=background_std, size=img_rotate.shape)
     rotated = np.where(img_rotate == 0, random_background, img_rotate)
 
-    return rotated/np.max(rotated)
+    return rotated
