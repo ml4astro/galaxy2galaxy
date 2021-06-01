@@ -17,6 +17,7 @@ from tensor2tensor.utils import t2t_model
 
 from galaxy2galaxy.layers.flows import masked_autoregressive_conditional_template, ConditionalNeuralSpline, conditional_neural_spline_template, autoregressive_conditional_neural_spline_template
 from galaxy2galaxy.layers.tfp_utils import RealNVP, MaskedAutoregressiveFlow
+from galaxy2galaxy.layers.image_utils import pack_images
 
 import tensorflow as tf
 import tensorflow_hub as hub
