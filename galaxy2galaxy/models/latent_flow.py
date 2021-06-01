@@ -25,7 +25,7 @@ import tensorflow_probability as tfp
 tfb = tfp.bijectors
 tfd = tfp.distributions
 
-def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4, description=None):
+def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4):
   """Helper for image summaries that are safe on TPU."""
   shape = image_logits.get_shape()
   if len(shape) != 4:
@@ -33,8 +33,7 @@ def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4, description
     return
   for i in range(shape[3]):
       tf.summary.image(name+str(i), pack_images(tf.expand_dims(image_logits[...,i],-1), rows, cols),
-      max_outputs=max_outputs,
-      description=description)
+      max_outputs=max_outputs)
   return 0
 
 class LatentFlow(t2t_model.T2TModel):
@@ -67,7 +66,7 @@ class LatentFlow(t2t_model.T2TModel):
     x = features['inputs']
     cond = {k: features[k] for k in hparamsp.attributes}
 
-    image_summary("input",x,description=str(cond))
+    image_summary("input",x)
 
     # Load the encoder and decoder modules
     encoder = hub.Module(hparams.encoder_module, trainable=False)
