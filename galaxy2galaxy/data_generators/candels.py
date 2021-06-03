@@ -159,7 +159,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
     ''' Loop on all the galaxies of the field '''
     for m,gal in enumerate(sub_cat['RB_ID']):
-        if gal == index or gal == 15431:     # To take care of the redudency inside the cat
+        if gal == index or gal == 15431 or sub_cat["mag"][m] < 0:     # To take care of the redudency inside the cat
             continue
         index = gal
         print(index)
@@ -184,7 +184,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     cleaned_image = clean_rotate_stamp(im_import,sigma_sex=1.5)#,noise_level=p.sigmas[res][n_filter])
 
                     if res == p.resolutions[0] and n_filter == 0:
-                        flux_ratio = target_flux_main_band/np.sum(cleaned_image)
+                        flux_ratio = 1/100000
 
                     im_tmp[:, :, n_filter] = cleaned_image * flux_ratio
                     # except Exception:
