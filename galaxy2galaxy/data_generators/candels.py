@@ -169,7 +169,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
             ''' Loop on the filters '''
             im = np.zeros((target_size, target_size, band_num))
 
-            k = 0
+            k = 0  
             for res in p.resolutions:
                 im_tmp = np.zeros((128, 128, len(p.filters[res])))
                 for n_filter, filt in enumerate(p.filters[res]):
@@ -188,6 +188,8 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
                     print(flux_ratio)
                     im_tmp[:, :, n_filter] = cleaned_image * flux_ratio
+                    print(cleaned_image)
+                    print(np.max(im_tmp[:, :, n_filter]))
                     # except Exception:
                     #     print('Galaxy not seen in every filter')
                     #     continue
