@@ -184,8 +184,9 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     cleaned_image = clean_rotate_stamp(im_import,sigma_sex=1.5)#,noise_level=p.sigmas[res][n_filter])
 
                     if res == p.resolutions[0] and n_filter == 0:
-                        flux_ratio = 1/100000
+                        flux_ratio = target_flux_main_band/np.sum(cleaned_image) if np.sum(cleaned_image) != 0 else 1
 
+                    print(flux_ratio)
                     im_tmp[:, :, n_filter] = cleaned_image * flux_ratio
                     # except Exception:
                     #     print('Galaxy not seen in every filter')
@@ -195,7 +196,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                 new_size = np.ceil(128/scalings[res])+1
                 im_tmp = resize(im_tmp, (new_size, new_size, len(p.filters[res])))
                 ''' Resize the image to the highest resolution to get consistent array sizes'''
-                im_tmp = rescale(im_tmp,p.pixel_scale[res]/target_pixel_scale,multichannel=True)
+                im_tmp = rescale(im_tmp,p.pixel_scale[res]/target_pixel_scale,multichannel=True,preserve_range=True)
                 im_tmp = _resize_image(im_tmp,target_size)
 
                 im[:,:,k:k+len(p.filters[res])] = im_tmp
