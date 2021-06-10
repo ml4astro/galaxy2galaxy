@@ -186,10 +186,9 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     if res == p.resolutions[0] and n_filter == 0:
                         flux_ratio = target_flux_main_band/np.sum(cleaned_image) if np.sum(cleaned_image) != 0 else 1
 
-                    print(flux_ratio)
                     im_tmp[:, :, n_filter] = cleaned_image * flux_ratio
-                    print(cleaned_image)
-                    print(np.max(im_tmp[:, :, n_filter]))
+                    if np.max(cleaned_image) <= 10**(-5):
+                        raise ValueError("Very weak image")
                     # except Exception:
                     #     print('Galaxy not seen in every filter')
                     #     continue
