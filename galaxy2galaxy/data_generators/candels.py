@@ -184,10 +184,10 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
                     cleaned_image = clean_rotate_stamp(im_import,sigma_sex=1.5)#,noise_level=p.sigmas[res][n_filter])
 
                     if res == p.resolutions[0] and n_filter == 0:
-                        flux_ratio = target_flux_main_band/np.sum(cleaned_image) if np.sum(cleaned_image) != 0 else 1
+                        flux_ratio = 1/np.max(cleaned_image) if np.max(cleaned_image) != 0 else 1
 
                     im_tmp[:, :, n_filter] = cleaned_image * flux_ratio
-                    if np.max(cleaned_image) <= 10**(-5):
+                    if np.max(cleaned_image) <= 5*10**(-3):
                         raise ValueError("Very weak image")
                     # except Exception:
                     #     print('Galaxy not seen in every filter')
