@@ -426,6 +426,35 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
     p.attributes = ['mag', 're', 'q','ZPHOT']
 
 
+@registry.register_problem
+class Attrs2imgCandelsGoodsEuclid64Blue(Img2imgCandelsGoodsMultires):
+  """
+  """
+
+  def eval_metrics(self):
+    eval_metrics = [ ]
+    return eval_metrics
+
+  def hparams(self, defaults, model_hparams):
+    p = defaults
+    p.pixel_scale = {'high' : 0.1, 'low' : 0.1}
+    p.base_pixel_scale = {'high' : 0.06,'low' : 0.06}
+    p.img_len = 64
+    p.sigmas = {"high" : [0.004094741966557142], "low" : [0.004017507500562]}
+    p.filters = {"high" : ['acs_f435w'], "low" : ['wfc3_f160w']}
+    p.zeropoint = 26.49
+    p.resolutions = ["high","low"]
+    p.example_per_shard = 1000
+    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
+                  "attributes":  modalities.ModalityType.IDENTITY,
+                  "targets": modalities.ModalityType.IDENTITY}
+    p.vocab_size = {"inputs": None,
+                    "attributes": None,
+                    "targets": None}
+    p.attributes = ['mag', 're', 'q','ZPHOT']
+
+
+
 
 
 
