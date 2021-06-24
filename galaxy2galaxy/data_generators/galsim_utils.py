@@ -169,7 +169,7 @@ def draw_and_encode_stamp(gal, psf, stamp_size, pixel_scale, num_bands = 1, flux
         im = gal.drawImage(nx=stamp_size, ny=stamp_size, scale=pixel_scale,
                            method='no_pixel', use_true_center=False).array.astype('float32')
 
-        im = im.array/np.max(im.array)
+        im = im/np.max(im)
 
         # Draw the Fourier domain image of the galaxy, using x1 zero padding,
         # and x2 subsampling
