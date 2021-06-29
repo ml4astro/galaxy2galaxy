@@ -62,6 +62,10 @@ class LatentFlow(t2t_model.T2TModel):
   def body(self, features):
     hparams = self.hparams
     attributes = hparams.attributes
+    if len(attributes[0]) == 0:
+      hparamsp = hparams.problem.get_hparams()
+      attributes = hparamsp.attributes
+    
     x = features['inputs']
     cond = {k: features[k] for k in attributes}
 
@@ -238,8 +242,7 @@ def latent_flow():
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
 
-  hparamsp = hparams.problem.get_hparams()
-  hparams.add_hparam("attributes",hparamsp.attributes)
+  hparams.add_hparam("attributes",[""])
 
   return hparams
 
@@ -269,8 +272,7 @@ def latent_flow_larger():
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
 
-  hparamsp = hparams.problem.get_hparams()
-  hparams.add_hparam("attributes",hparamsp.attributes)
+  hparams.add_hparam("attributes",[""])
 
   return hparams
 
@@ -301,7 +303,6 @@ def latent_flow_nsf():
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
 
-  hparamsp = hparams.problem.get_hparams()
-  hparams.add_hparam("attributes",hparamsp.attributes)
+  hparams.add_hparam("attributes",[""])
 
   return hparams
