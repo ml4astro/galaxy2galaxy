@@ -217,8 +217,6 @@ class LatentMafNsf(LatentFlow):
 def latent_flow():
   """Basic autoencoder model."""
   hparams = common_hparams.basic_params1()
-  hparamsp = hparams.problem.get_hparams()
-  hparams.attributes = hparamsp.attributes
   hparams.optimizer = "adam"
   hparams.learning_rate_constant = 0.0002
   hparams.learning_rate_warmup_steps = 500
@@ -240,6 +238,9 @@ def latent_flow():
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
 
+  hparamsp = hparams.problem.get_hparams()
+  hparams.add_hparam("attributes",hparamsp.attributes)
+
   return hparams
 
 
@@ -247,8 +248,6 @@ def latent_flow():
 def latent_flow_larger():
   """Basic autoencoder model."""
   hparams = common_hparams.basic_params1()
-  hparamsp = hparams.problem.get_hparams()
-  hparams.attributes = hparamsp.attributes
   hparams.optimizer = "adam"
   hparams.learning_rate_constant = 0.1
   hparams.learning_rate_warmup_steps = 1000
@@ -270,14 +269,15 @@ def latent_flow_larger():
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
 
+  hparamsp = hparams.problem.get_hparams()
+  hparams.add_hparam("attributes",hparamsp.attributes)
+
   return hparams
 
 @registry.register_hparams
 def latent_flow_nsf():
   """Basic autoencoder model."""
   hparams = common_hparams.basic_params1()
-  hparamsp = hparams.problem.get_hparams()
-  hparams.attributes = hparamsp.attributes
   hparams.optimizer = "adam"
   hparams.learning_rate_constant = 0.1
   hparams.learning_rate_warmup_steps = 1000
@@ -300,5 +300,8 @@ def latent_flow_nsf():
 
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+
+  hparamsp = hparams.problem.get_hparams()
+  hparams.add_hparam("attributes",hparamsp.attributes)
 
   return hparams
