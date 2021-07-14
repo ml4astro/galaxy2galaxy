@@ -423,7 +423,7 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
     p.vocab_size = {"inputs": None,
                     "attributes": None,
                     "targets": None}
-    p.attributes = ['mag', 're', 'q','ZPHOT']
+    p.attributes = ['mag','re', 'q','ZPHOT','F_IRR','F_SPHEROID','F_DISK']
 
 
 @registry.register_problem

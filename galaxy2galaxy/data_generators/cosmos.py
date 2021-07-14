@@ -531,12 +531,15 @@ class Img2imgCosmosMultiband(galsim_utils.GalsimProblem):
       else:
         attributes = None
 
+      flux_r = [1.0]
+      for i in range(1,self.num_bands):
+        flux_r.append(max(np.random.normal(p.flux_ratio_mean[i],p.flux_ratio_std[i]),0))
       # Utility function encodes the postage stamp for serialized features
       yield galsim_utils.draw_and_encode_stamp(gal, psf,
                                                stamp_size=p.img_len,
                                                pixel_scale=p.pixel_scale,
                                                attributes=attributes,
-                                               flux_r=p.flux_ratio,
+                                               flux_r=flux_r,
                                                num_bands=self.num_bands)
 
   def preprocess_example(self, example, unused_mode, unused_hparams):
@@ -578,7 +581,8 @@ class Attrs2imgCosmosMultiband64(Img2imgCosmosMultiband):
     p.pixel_scale = 0.1
     p.img_len = 64
     p.example_per_shard = 1000
-    p.flux_ratio = [1,1]
+    p.flux_ratio_mean = [1,0.299]
+    p.flux_ratio_std = [0,1.038]
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "attributes":  modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
