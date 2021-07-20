@@ -52,7 +52,7 @@ def _resize_image(im, size):
 
 @registry.register_problem
 class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
-  """ Base class for image problems created from CANDELS GOODS (North and South) fields, in 7 bands.
+  """ Base class for image problems with the CANDELS catalog, with multiresolution images.
   """
 
   @property
@@ -143,11 +143,9 @@ class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
     sigmas = p.sigmas
 
     # Step 2: Extract postage stamps, resize them to requested size
-    ''' Loop on the two fields'''
     n_gal_creat = 0
     index = 0
    
-    
     ''' Create a subcat containing only the galaxies (in every filters) of the current field'''
     sub_cat = all_cat[np.where(np.isin(list(all_cat["FIELD_1"]),["GDS","GDN","EGS","COSMOS","UDS"]))]
     sub_cat = sub_cat[np.where(sub_cat['mag'] <= 25.3)]
@@ -174,12 +172,9 @@ class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
                 im_tmp = np.zeros((128, 128, len(p.filters[res])))
                 for n_filter, filt in enumerate(p.filters[res]):
                     print(filt)
-                    # try :
                     ''' Open the image corresponding to the index of the current galaxy'''
 
                     tmp_file = glob.glob(os.path.join(data_dir, sub_cat["FIELD_1"][m], filt)+'/galaxy_'+str(index)+'_*')[0]
-                    # if np.max(fits.open(tmp_file)[0].data) == 0.:
-                    #     sigmas[res][n_filter] = 10
                     im_import = fits.open(tmp_file)[0].data
                     cleaned_image = clean_rotate_stamp(im_import,sigma_sex=1.5)#,noise_level=p.sigmas[res][n_filter])
 
@@ -189,9 +184,6 @@ class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
                     im_tmp[:, :, n_filter] = cleaned_image * flux_ratio
                     if np.max(cleaned_image) <= 5*10**(-3):
                         raise ValueError("Very weak image")
-                    # except Exception:
-                    #     print('Galaxy not seen in every filter')
-                    #     continue
                         
                 ''' Resize the image to the low resolution'''
                 new_size = np.ceil(128/scalings[res])+1
@@ -205,7 +197,7 @@ class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
             
             im = _resize_image(im, p.img_len)
             
-            #Check that there is still a galaxy
+            # Check that there is still a galaxy
             img_s = im[:,:,0]
             img_s = img_s = img_s.copy(order='C')
             bkg = sep.Background(img_s)
@@ -325,28 +317,24 @@ class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
         "inputs": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="image/encoded",
                 format_key="image/format",
-                # channels=self.num_bands,
                 shape=[p.img_len, p.img_len, self.num_bands],
                 dtype=tf.float32),
 
         "psf": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="psf/encoded",
                 format_key="psf/format",
-                # channels=self.num_bands,
                 shape=[2*p.img_len, 2*p.img_len // 2 + 1, self.num_bands],
                 dtype=tf.float32),
 
         "ps": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="ps/encoded",
                 format_key="ps/format",
-                # channels=self.num_bands,
                 shape=[p.img_len, p.img_len//2+1, self.num_bands],
                 dtype=tf.float32),
 
         "sigma_noise": tf.contrib.slim.tfexample_decoder.Image(
                 image_key="sigma_noise/encoded",
                 format_key="sigma_noise/format",
-                # channels=self.num_bands,
                 shape=[self.num_bands],
                 dtype=tf.float32),
         
@@ -372,7 +360,7 @@ class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
 
 @registry.register_problem
 class Attrs2imgCandelsEuclid64(Img2imgCandelsMultires):
-  """
+  """For generating images with the Euclid bands
   """
 
   def eval_metrics(self):
@@ -400,7 +388,7 @@ class Attrs2imgCandelsEuclid64(Img2imgCandelsMultires):
 
 @registry.register_problem
 class Attrs2imgCandelsEuclid64TwoBands(Img2imgCandelsMultires):
-  """
+  """ For generating two-band images (visible and infrared)
   """
 
   def eval_metrics(self):
@@ -426,7 +414,7 @@ class Attrs2imgCandelsEuclid64TwoBands(Img2imgCandelsMultires):
     p.attributes = ['mag','re', 'q','ZPHOT','F_IRR','F_SPHEROID','F_DISK']
 
 
-def find_central(sex_cat,center_coords=32):
+def find_central(sex_cat,center_coords=64):
     """Find the central galaxy in a catalog provided by SExtractor
     """
     n_detect = len(sex_cat)
@@ -499,9 +487,11 @@ def mask_out_pixels(img, segmap, segval,
         
     return masked_img.astype(img.dtype), sources, background_mask, central_source, sources_except_central
 
-def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
+def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None, rotate_b=False, blend_threshold=0.1):
+    """Clean images by removing galaxies other than the central one.
+    """
 
-    ''' Sex for clean'''
+    # Detect galaxies with SExtractor
     img = img.byteswap().newbyteorder()
     im_size = img.shape[0]
     bkg = sep.Background(img)
@@ -511,9 +501,9 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
     if len(cat) == 0:
         raise ValueError('No galaxy detected in the field')
     
-    middle_pos = [cat[find_central(cat,im_shape[0]//2)[0]]['x'],cat[find_central(cat,im_shape[0]//2)[0]]['y']]
+    middle_pos = [cat[find_central(cat,im_size[0]//2)[0]]['x'],cat[find_central(cat,im_size[0]//2)[0]]['y']]
     
-    distance = np.sqrt((middle_pos[0]-im_shape[0]//2)**2 + (middle_pos[1]-im_shape[0]//2)**2)
+    distance = np.sqrt((middle_pos[0]-im_size[0]//2)**2 + (middle_pos[1]-im_size[0]//2)**2)
     if distance > 10 :
         raise ValueError('No galaxy detected in the center')
 
@@ -530,15 +520,17 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
         blended_galaxies = np.unique(sex_seg[loc])
         for blended_galaxy in blended_galaxies:
             blended_galaxy_flux = np.sum(img[np.where(sex_seg==blended_galaxy)])
-            if blend_flux/blended_galaxy_flux > 0.1:
+            if blend_flux/blended_galaxy_flux > blend_threshold:
               raise ValueError('Blending suspected')
 
-    # '''Rotate'''
-    # PA = cat[find_central(cat)[0]][4]
-    # img_rotate = rotate(cleaned, PA, reshape=False)
-    
-    img_rotate = cleaned
-    '''Add noise'''
+    # Rotate
+    if rotate_b:
+        PA = cat[find_central(cat)[0]][4]
+        img_rotate = rotate(cleaned, PA, reshape=False)
+    else:
+        img_rotate = cleaned
+
+    # Add noise
     background_mask = np.logical_and(np.logical_not(sex_seg==0),np.array(img,dtype=bool))
     if noise_level == None:
         background_std = np.std(img * background_mask)

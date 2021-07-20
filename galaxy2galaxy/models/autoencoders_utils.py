@@ -262,19 +262,6 @@ def autoencoder_body(self, features):
   image_summary("without_psf",tf.reshape(reconstr, labels_shape))
   # Apply channel-wise convolution with the PSF if requested
   if hparams.apply_psf and 'psf' in features:
-    # rec_padded = tf.pad(reconstr, [[0,0],
-    #                               [0, int(hparams.psf_convolution_pad_factor*shape[1])],
-    #                               [0, int(hparams.psf_convolution_pad_factor*shape[2])],
-    #                               [0,0]])
-    # rec_padded_t = tf.transpose(rec_padded, perm=[0, 3,  1, 2])
-    # psf_padded = tf.pad(features['psf'], [[0,0],
-    #                                       [0, int(hparams.psf_convolution_pad_factor*shape[1])],
-    #                                       [0, int(hparams.psf_convolution_pad_factor*shape[2])],
-    #                                       [0,0]])
-    # psf_padded_t = tf.transpose(psf_padded, perm=[0, 3,  1, 2])
-    # reconstr_t = tf.spectral.irfft2d(tf.spectral.rfft2d(rec_padded_t)*tf.cast(tf.abs(tf.spectral.rfft2d(psf_padded_t)), tf.complex64))
-    # reconstr = tf.transpose(reconstr_t, perm=[0, 2, 3, 1])
-    # reconstr = reconstr[:, :shape[1], :shape[2], :]
     output_list = []
     for i in range(shape[3]):
       output_list.append(tf.squeeze(convolve(tf.expand_dims(reconstr[...,i],-1), tf.cast(features['psf'][...,i], tf.complex64),
