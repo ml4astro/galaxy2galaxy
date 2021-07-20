@@ -503,6 +503,7 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
 
     ''' Sex for clean'''
     img = img.byteswap().newbyteorder()
+    im_size = img.shape[0]
     bkg = sep.Background(img)
    
     cat,sex_seg = sep.extract(img-bkg,sigma_sex,err=bkg.globalrms,segmentation_map=True)
@@ -510,9 +511,9 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
     if len(cat) == 0:
         raise ValueError('No galaxy detected in the field')
     
-    middle_pos = [cat[find_central(cat)[0]]['x'],cat[find_central(cat)[0]]['y']]
+    middle_pos = [cat[find_central(cat,im_shape[0]//2)[0]]['x'],cat[find_central(cat,im_shape[0]//2)[0]]['y']]
     
-    distance = np.sqrt((middle_pos[0]-64)**2 + (middle_pos[1]-64)**2)
+    distance = np.sqrt((middle_pos[0]-im_shape[0]//2)**2 + (middle_pos[1]-im_shape[0]//2)**2)
     if distance > 10 :
         raise ValueError('No galaxy detected in the center')
 
@@ -529,7 +530,7 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None):
         blended_galaxies = np.unique(sex_seg[loc])
         for blended_galaxy in blended_galaxies:
             blended_galaxy_flux = np.sum(img[np.where(sex_seg==blended_galaxy)])
-            if blend_flux/blended_galaxy_flux > 0.5:
+            if blend_flux/blended_galaxy_flux > 0.1:
               raise ValueError('Blending suspected')
 
     # '''Rotate'''
