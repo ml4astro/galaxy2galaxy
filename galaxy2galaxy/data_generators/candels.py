@@ -51,7 +51,7 @@ def _resize_image(im, size):
 
 
 @registry.register_problem
-class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
+class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
   """ Base class for image problems created from CANDELS GOODS (North and South) fields, in 7 bands.
   """
 
@@ -371,7 +371,7 @@ class Img2imgCandelsGoodsMultires(astroimage_utils.AstroImageProblem):
 
 
 @registry.register_problem
-class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsMultires):
+class Attrs2imgCandelsEuclid64(Img2imgCandelsMultires):
   """
   """
 
@@ -399,7 +399,7 @@ class Attrs2imgCandelsGoodsEuclid64(Img2imgCandelsGoodsMultires):
 
 
 @registry.register_problem
-class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
+class Attrs2imgCandelsEuclid64TwoBands(Img2imgCandelsMultires):
   """
   """
 
@@ -426,41 +426,9 @@ class Attrs2imgCandelsGoodsEuclid64Test(Img2imgCandelsGoodsMultires):
     p.attributes = ['mag','re', 'q','ZPHOT','F_IRR','F_SPHEROID','F_DISK']
 
 
-@registry.register_problem
-class Attrs2imgCandelsGoodsEuclid64Blue(Img2imgCandelsGoodsMultires):
-  """
-  """
-
-  def eval_metrics(self):
-    eval_metrics = [ ]
-    return eval_metrics
-
-  def hparams(self, defaults, model_hparams):
-    p = defaults
-    p.pixel_scale = {'high' : 0.1, 'low' : 0.1}
-    p.base_pixel_scale = {'high' : 0.06,'low' : 0.06}
-    p.img_len = 64
-    p.sigmas = {"high" : [0.004094741966557142], "low" : [0.004017507500562]}
-    p.filters = {"high" : ['acs_f435w'], "low" : ['wfc3_f160w']}
-    p.zeropoint = 26.49
-    p.resolutions = ["high","low"]
-    p.example_per_shard = 1000
-    p.modality = {"inputs": modalities.ModalityType.IDENTITY,
-                  "attributes":  modalities.ModalityType.IDENTITY,
-                  "targets": modalities.ModalityType.IDENTITY}
-    p.vocab_size = {"inputs": None,
-                    "attributes": None,
-                    "targets": None}
-    p.attributes = ['mag', 're', 'q','ZPHOT']
-
-
-
-
-
-
-
-def find_central(sex_cat):
-
+def find_central(sex_cat,center_coords=32):
+    """Find the central galaxy in a catalog provided by SExtractor
+    """
     n_detect = len(sex_cat)
     
     ''' Match the pred and true cat'''
@@ -469,8 +437,8 @@ def find_central(sex_cat):
     pred_pos[:, 1] = sex_cat['y']
 
     true_pos = np.zeros((1, 2))
-    true_pos[:, 0] = 64
-    true_pos[:, 1] = 64
+    true_pos[:, 0] = center_coords
+    true_pos[:, 1] = center_coords
 
     _, match_index = KDTree(pred_pos).query(true_pos)
     
