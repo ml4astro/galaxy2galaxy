@@ -501,9 +501,9 @@ def clean_rotate_stamp(img, eps=5, sigma_sex=2, noise_level=None, rotate_b=False
     if len(cat) == 0:
         raise ValueError('No galaxy detected in the field')
     
-    middle_pos = [cat[find_central(cat,im_size[0]//2)[0]]['x'],cat[find_central(cat,im_size[0]//2)[0]]['y']]
+    middle_pos = [cat[find_central(cat,im_size//2)[0]]['x'],cat[find_central(cat,im_size//2)[0]]['y']]
     
-    distance = np.sqrt((middle_pos[0]-im_size[0]//2)**2 + (middle_pos[1]-im_size[0]//2)**2)
+    distance = np.sqrt((middle_pos[0]-im_size//2)**2 + (middle_pos[1]-im_size//2)**2)
     if distance > 10 :
         raise ValueError('No galaxy detected in the center')
 
