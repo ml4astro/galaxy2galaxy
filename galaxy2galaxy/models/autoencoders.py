@@ -254,7 +254,7 @@ def continuous_autoencoder_residual_128():
   hparams = continuous_autoencoder_basic()
   hparams.optimizer = "Adafactor"
   hparams.clip_grad_norm = 1.0
-  hparams.learning_rate_constant = 0.35
+  hparams.learning_rate_constant = 0.25
   hparams.learning_rate_warmup_steps = 500
   hparams.learning_rate_schedule = "constant * linear_warmup * rsqrt_decay"
   hparams.num_hidden_layers = 7

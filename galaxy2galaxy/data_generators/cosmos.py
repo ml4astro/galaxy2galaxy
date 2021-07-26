@@ -119,11 +119,11 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
         psf = gal.original_psf
 
       # Apply rotation so that the galaxy is at 0 PA
-#       if hasattr(p, "rotation") and p.rotation:
-      rotation_angle = galsim.Angle(-cat_param[ind]['sersic_beta'],
+      if hasattr(p, "rotation") and p.rotation:
+        rotation_angle = galsim.Angle(-np.random.rand()* 2 * np.pi,
                                       galsim.radians)
-      gal = gal.rotate(rotation_angle)
-      psf = psf.rotate(rotation_angle)
+        gal = gal.rotate(rotation_angle)
+        psf = psf.rotate(rotation_angle)
 
       # We save the corresponding attributes for this galaxy
       if hasattr(p, 'attributes'):

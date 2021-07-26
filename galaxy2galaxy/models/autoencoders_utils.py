@@ -288,6 +288,6 @@ def autoencoder_body(self, features):
   logits = tf.reshape(reconstr, labels_shape)
 
   image_summary("ae", reconstr)
-  image_summary("input", labels)  
+  image_summary("input", labels)
 
   return logits, losses
