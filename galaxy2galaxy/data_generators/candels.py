@@ -34,12 +34,6 @@ from scipy.ndimage import rotate
 from scipy.spatial import KDTree
 import sep
 
-
-# HSC default pixel scale
-_HSC_PIXEL_SCALE=0.168 #arcsec
-# Path to sql files for HSC samples
-_HSC_SAMPLE_SQL_DIR=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
-
 def _resize_image(im, size):
   centh = im.shape[0]/2
   centw = im.shape[1]/2
@@ -160,7 +154,6 @@ class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
         if gal == index or gal == 15431 or sub_cat["mag"][m] < 0:     # To take care of the redudency inside the cat
             continue
         index = gal
-        print(index)
         target_flux_main_band = 10**(-0.4*(sub_cat['mag'][m]-p.zeropoint))
 
         try:
@@ -171,7 +164,6 @@ class Img2imgCandelsMultires(astroimage_utils.AstroImageProblem):
             for res in p.resolutions:
                 im_tmp = np.zeros((128, 128, len(p.filters[res])))
                 for n_filter, filt in enumerate(p.filters[res]):
-                    print(filt)
                     ''' Open the image corresponding to the index of the current galaxy'''
 
                     tmp_file = glob.glob(os.path.join(data_dir, sub_cat["FIELD_1"][m], filt)+'/galaxy_'+str(index)+'_*')[0]
