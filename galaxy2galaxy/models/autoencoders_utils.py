@@ -38,26 +38,32 @@ def loglikelihood_fn(xin, yin, features, hparams):
   size = xin.get_shape().as_list()[1]
   if hparams.likelihood_type == 'Fourier':
     # Compute FFT normalization factor
-    x = tf.spectral.rfft2d(xin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.) / size**2 * (2*np.pi)**2
-    y = tf.spectral.rfft2d(yin[...,0]) / tf.complex(tf.sqrt(tf.exp(features['ps'])),0.) / size**2 * (2*np.pi)**2
+    x = tf.transpose(xin,[0,3,1,2])
+    y = tf.transpose(yin,[0,3,1,2])
+    ps = tf.reshape(features['ps'],tf.shape(tf.transpose(tf.spectral.rfft2d(x),[0,2,3,1])))
+    x = tf.transpose(tf.spectral.rfft2d(x),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(ps)),0.) / size**2 * (2*np.pi)**2
+    y = tf.transpose(tf.spectral.rfft2d(y),[0,2,3,1]) / tf.complex(tf.sqrt(tf.exp(ps)),0.) / size**2 * (2*np.pi)**2
 
-    pz = 0.5 * tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2]) #/ size**2
+    pz = 0.5 * tf.reduce_sum(tf.abs(x - y)**2, axis=[-1, -2, -3]) #/ size**2
+    tf.print(-pz)
     return -pz
   elif hparams.likelihood_type == 'Pixel':
     # TODO: include per example noise std
-    pz = 0.5 * tf.reduce_sum(tf.abs(xin[:,:,:,0] - yin[...,0])**2, axis=[-1, -2]) / hparams.noise_rms**2 #/ size**2
+    pz = 0.5 * tf.reduce_sum(tf.abs(xin - yin)**2, axis=[-1, -2, -3]) / hparams.noise_rms**2 #/ size**2
     return -pz
   else:
     raise NotImplementedError
 
 def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4):
   """Helper for image summaries that are safe on TPU."""
-  if len(image_logits.get_shape()) != 4:
+  shape = image_logits.get_shape()
+  if len(shape) != 4:
     tf.logging.info("Not generating image summary, maybe not an image.")
     return
-  return tf.summary.image(name, pack_images(image_logits, rows, cols),
+  for i in range(shape[3]):
+      tf.summary.image(name+str(i), pack_images(tf.expand_dims(image_logits[...,i],-1), rows, cols),
       max_outputs=max_outputs)
-
+  return 0
 def autoencoder_body(self, features):
   """ Customized body function for autoencoders acting on continuous images.
   This is based on tensor2tensor.models.research.AutoencoderBasic.body
@@ -125,11 +131,14 @@ def autoencoder_body(self, features):
       input_layer = tf.placeholder(tf.float32, shape=b_shape)
       x = self.unbottleneck(input_layer, res_size)
       x = self.decoder(x, None)
-      reconstr = tf.layers.dense(x, self.num_channels, name="autoencoder_final",
+      reconstr = tf.layers.dense(x, input_shape[-1], name="autoencoder_final",
                                  activation=output_activation)
       hub.add_signature(inputs=input_layer, outputs=reconstr)
       hub.attach_message("stamp_size", tf.train.Int64List(value=[hparams.problem_hparams.img_len]))
-      hub.attach_message("pixel_size", tf.train.FloatList(value=[hparams.problem_hparams.pixel_scale]))
+      try:
+        hub.attach_message("pixel_size", tf.train.FloatList(value=[hparams.problem_hparams.pixel_scale[res] for res in hparams.problem_hparams.resolutions]))
+      except AttributeError:
+        hub.attach_message("pixel_size", tf.train.FloatList(value=[hparams.problem_hparams.pixel_scale]))
     spec = hub.create_module_spec(make_model_spec, drop_collections=['checkpoints'])
     decoder = hub.Module(spec, name="decoder_module")
     hub.register_module_for_export(decoder, "decoder")
@@ -222,7 +231,7 @@ def autoencoder_body(self, features):
     res = x[:, :shape[1], :shape[2], :]
 
   with tf.variable_scope('decoder_module'):
-    reconstr = tf.layers.dense(res, self.num_channels, name="autoencoder_final",
+    reconstr = tf.layers.dense(res, shape[-1], name="autoencoder_final",
                                activation=output_activation)
 
   # We apply an optional apodization of the output before taking the
@@ -250,14 +259,15 @@ def autoencoder_body(self, features):
   #tv = tf.reduce_sum(tf.sqrt(im_dx**2 + im_dy**2 + 1e-6), axis=[1,2,3])
   #tv = tf.reduce_mean(tv)
 
+  image_summary("without_psf",tf.reshape(reconstr, labels_shape))
   # Apply channel-wise convolution with the PSF if requested
-  # TODO: Handle multiple bands
   if hparams.apply_psf and 'psf' in features:
-    if self.num_channels > 1:
-      raise NotImplementedError
-
-    reconstr = convolve(reconstr, tf.cast(features['psf'][...,0], tf.complex64),
-                        zero_padding_factor=1)
+    output_list = []
+    for i in range(shape[3]):
+      output_list.append(tf.squeeze(convolve(tf.expand_dims(reconstr[...,i],-1), tf.cast(features['psf'][...,i], tf.complex64),
+                          zero_padding_factor=1)))
+    reconstr = tf.stack(output_list,axis=-1)
+    reconstr = tf.reshape(reconstr,shape)
 
   # Losses.
   losses = {

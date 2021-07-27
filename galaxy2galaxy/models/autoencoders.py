@@ -263,7 +263,7 @@ def continuous_autoencoder_residual_128():
   hparams.batch_size = 32
   hparams.bottleneck_bits = 64
 
-  hparams.bottleneck_warmup_steps = 5000
+  hparams.bottleneck_warmup_steps = 2000
 
   hparams.add_hparam("autoregressive_decode_steps", 0)
   hparams.add_hparam("num_residual_layers", 2)

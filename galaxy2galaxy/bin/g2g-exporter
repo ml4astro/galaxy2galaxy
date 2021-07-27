@@ -16,6 +16,7 @@ from tensor2tensor.utils import decoding
 from tensor2tensor.utils import t2t_model
 from tensor2tensor.utils import trainer_lib
 from tensor2tensor.utils import usr_dir
+from tensor2tensor.utils import registry
 
 from galaxy2galaxy import models
 from galaxy2galaxy import problems
@@ -101,7 +102,12 @@ def main(_):
 
   estimator = create_estimator(run_config, hparams)
   hparams.img_len = problem.get_hparams().img_len
-  hparams.attributes = problem.get_hparams().attributes
+  try:
+    if len(hparams.attributes) == 0:
+      hparams.attributes = hparams.problem.get_hparams().attributes
+  except:
+    pass
+
 
   # Use tf hub to export any module that has been registered
   exporter = hub.LatestModuleExporter("tf_hub",

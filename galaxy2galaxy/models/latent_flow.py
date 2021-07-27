@@ -17,6 +17,7 @@ from tensor2tensor.utils import t2t_model
 
 from galaxy2galaxy.layers.flows import masked_autoregressive_conditional_template, ConditionalNeuralSpline, conditional_neural_spline_template, autoregressive_conditional_neural_spline_template
 from galaxy2galaxy.layers.tfp_utils import RealNVP, MaskedAutoregressiveFlow
+from galaxy2galaxy.layers.image_utils import pack_images
 
 import tensorflow as tf
 import tensorflow_hub as hub
@@ -24,9 +25,19 @@ import tensorflow_probability as tfp
 tfb = tfp.bijectors
 tfd = tfp.distributions
 
+def image_summary(name, image_logits, max_outputs=1, rows=4, cols=4):
+  """Helper for image summaries that are safe on TPU."""
+  shape = image_logits.get_shape()
+  if len(shape) != 4:
+    tf.logging.info("Not generating image summary, maybe not an image.")
+    return
+  for i in range(shape[3]):
+      tf.summary.image(name+str(i), pack_images(tf.expand_dims(image_logits[...,i],-1), rows, cols),
+      max_outputs=max_outputs)
+  return 0
+
 class LatentFlow(t2t_model.T2TModel):
   """ Base class for latent flows
-
   This assumes that an already exported tensorflow hub autoencoder is provided
   in hparams.
   """
@@ -50,10 +61,15 @@ class LatentFlow(t2t_model.T2TModel):
 
   def body(self, features):
     hparams = self.hparams
-    hparamsp = hparams.problem.get_hparams()
-
+    attributes = hparams.attributes
+    if len(attributes[0]) == 0:
+      hparamsp = hparams.problem.get_hparams()
+      attributes = hparamsp.attributes
+    
     x = features['inputs']
-    cond = {k: features[k] for k in hparamsp.attributes}
+    cond = {k: features[k] for k in attributes}
+
+    image_summary("input",x)
 
     # Load the encoder and decoder modules
     encoder = hub.Module(hparams.encoder_module, trainable=False)
@@ -64,7 +80,7 @@ class LatentFlow(t2t_model.T2TModel):
     code_shape = [-1, code_shape[1].value, code_shape[2].value, code_shape[3].value]
 
     def get_flow(inputs, is_training=True):
-      y = tf.concat([tf.expand_dims(inputs[k], axis=1) for k in hparamsp.attributes] ,axis=1)
+      y = tf.concat([tf.expand_dims(inputs[k], axis=1) for k in attributes] ,axis=1)
       y = tf.layers.batch_normalization(y, name="y_norm", training=is_training)
       flow = self.normalizing_flow(y, latent_size)
       return flow
@@ -72,7 +88,7 @@ class LatentFlow(t2t_model.T2TModel):
     if hparams.mode == tf.estimator.ModeKeys.PREDICT:
       # Export the latent flow alone
       def flow_module_spec():
-        inputs_params = {k: tf.placeholder(tf.float32, shape=[None]) for k in hparamsp.attributes}
+        inputs_params = {k: tf.placeholder(tf.float32, shape=[None]) for k in attributes}
         random_normal = tf.placeholder(tf.float32, shape=[None, latent_size])
         flow = get_flow(inputs_params, is_training=False)
         samples = flow._bijector.forward(random_normal)
@@ -82,7 +98,7 @@ class LatentFlow(t2t_model.T2TModel):
       flow_spec = hub.create_module_spec(flow_module_spec)
       flow = hub.Module(flow_spec, name='flow_module')
       hub.register_module_for_export(flow, "code_sampler")
-      cond['random_normal'] = tf.random_normal(shape=[tf.shape(cond[hparamsp.attributes[0]])[0] , latent_size])
+      cond['random_normal'] = tf.random_normal(shape=[tf.shape(cond[attributes[0]])[0] , latent_size])
       samples = flow(cond)
       return samples, {'loglikelihood': 0}
 
@@ -226,6 +242,8 @@ def latent_flow():
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
 
+  hparams.add_hparam("attributes",[""])
+
   return hparams
 
 
@@ -253,6 +271,8 @@ def latent_flow_larger():
 
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+
+  hparams.add_hparam("attributes",[""])
 
   return hparams
 
@@ -282,5 +302,7 @@ def latent_flow_nsf():
 
   # hparams related to the PSF
   hparams.add_hparam("encode_psf", True) # Should we use the PSF at the encoder
+
+  hparams.add_hparam("attributes",[""])
 
   return hparams
