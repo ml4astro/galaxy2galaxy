@@ -51,7 +51,8 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
     p = defaults
     p.pixel_scale = 0.03
     p.img_len = 64
-
+    p.example_per_shard = 1000
+    
     p.modality = {"inputs": modalities.ModalityType.IDENTITY,
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
@@ -118,7 +119,7 @@ class Img2imgCosmos(galsim_utils.GalsimProblem):
       else:
         psf = gal.original_psf
 
-      # Apply rotation so that the galaxy is at 0 PA
+      # Apply random rotation if requested
       if hasattr(p, "rotation") and p.rotation:
         rotation_angle = galsim.Angle(-np.random.rand()* 2 * np.pi,
                                       galsim.radians)
@@ -228,7 +229,6 @@ class Img2imgCosmos32(Img2imgCosmos):
                   "targets": modalities.ModalityType.IDENTITY}
     p.vocab_size = {"inputs": None,
                     "targets": None}
-    
 
 @registry.register_problem
 class Img2imgCosmos128(Img2imgCosmos):
